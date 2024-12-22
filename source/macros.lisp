@@ -1,0 +1,36 @@
+(cl:in-package #:pantalea.event-loop)
+
+
+(defmacro define-sequence (spec &body body)
+  (bind ((variable-names (mapcar #'first spec))
+         (!lock (gensym))
+         (!list (gensym)))
+    `(let ,variable-names
+       ,@(mapcar (lambda (spec &aux (body (cddr spec)) (variable-name (first spec)))
+                   `(setf ,variable-name (p:promise ,@body)))
+                 spec)
+       (let ,(mapcar
+              (lambda (spec &aux
+                         (dependency (second spec))
+                         (name (first dependency))
+                         (delay (assoc :delay dependency ))
+                         (success-list (assoc :success dependency))
+                         (failure-list (assoc :failure dependency))
+                         (complete-list (append success-list failure-list)))
+                (assert (endp (intersection success-list failure-list)))
+                `(,name (let ((callback
+                                (let ((,!lock (bt2:make-lock))
+                                      (,!list (list ,@complete-list)))
+                                  (lambda (&optional (p:*value* nil p:*value-bound-p*))
+                                    (bt2:with-lock-held (,!lock)
+                                      (when (let ((promise (first p:*promises*)))
+                                              (setf ,!list (delete promise ,!list :test #'eq))
+                                              (endp ,!list))
+                                        (add! *event-loop* ,name ,delay)))))))
+                          ,@(mapcar (lambda (d) `(p:attach-on-success! ,d callback))
+                                    success-list)
+                          ,@(mapcar (lambda (d) `(p:attach-on-failure! ,d callback))
+                                    failure-list)
+                          callback)))
+              spec)
+         ,@body))))

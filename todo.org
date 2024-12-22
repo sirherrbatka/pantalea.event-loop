@@ -1,0 +1,4 @@
+* Inbox
+** DONE wepchnąć do kolejki event-loop lub timing-wheel zależnie od tego czy delay jest równe 0 czy też nie
+
+[[file:~/quicklisp/local-projects/pantalea.event-loop/source/generics.lisp::defgeneric add! (event-loop event &optional delay)]]
