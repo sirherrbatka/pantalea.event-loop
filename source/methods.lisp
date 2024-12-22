@@ -58,7 +58,7 @@
                                  (log-info "Event loop thread recieved TERMINATION-CONDITION, will stop."))
                                (error (e)
                                  (log-error "Event loop thread crashing under error: ~a" e)))))
-          (timing-wheel event-loop) (tw:run 500 0.01))
+          (timing-wheel event-loop) (tw:run 1000 0.01))
     event-loop)))
 
 (defmethod running-p ((event-loop event-loop))
