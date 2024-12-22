@@ -1,6 +1,9 @@
 (cl:in-package #:pantalea.event-loop)
 
 
+(defmethod id ((handler response-handler))
+  (id (request handler)))
+
 (defmethod react ((event function) (loop event-loop))
   (handler-case (funcall event)
     (error (e)

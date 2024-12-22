@@ -66,3 +66,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (define-condition termination-condition ()
   ())
+
+(defclass response-handler ()
+  ((%request
+    :initarg :request
+    :reader request)))
