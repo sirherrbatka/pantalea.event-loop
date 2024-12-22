@@ -25,6 +25,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:use #:cl #:iterate)
   (:import-from #:metabang.bind
                 #:bind)
+  (:import-from #:pantalea.queue
+                #:make-blocking-queue
+                #:queue-push!
+                #:queue-pop!)
   (:import-from #:alexandria
                 #:most-positive-fixnum
                 #:if-let
@@ -40,8 +44,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:log-warn)
   (:local-nicknames
    (#:tw #:pantalea.timing-wheel))
-  (:local-nicknames
-   (#:q #:pantalea.queue))
   (:local-nicknames
    (#:p #:pantalea.promise))
   (:export

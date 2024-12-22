@@ -22,7 +22,7 @@
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= 0 delay))
   (if (zerop delay)
-      (q:queue-push! (queue event-loop) event)
+      (queue-push! (queue event-loop) event)
       (tw:add! (timing-wheel event-loop)
                delay
                (lambda ()
@@ -44,7 +44,7 @@
                              (log-info "Event loop started.")
                              (handler-case
                                  (iterate
-                                   (for event = (q:queue-pop! queue))
+                                   (for event = (queue-pop! queue))
                                    (react event event-loop))
                                (termination-condition (e)
                                  (declare (ignore e))
@@ -66,6 +66,6 @@
     (add! event-loop (make-instance 'termination-event))
     (bt2:join-thread (thread event-loop))
     (setf (thread event-loop) nil
-          (queue event-loop) (q:make-queue)
+          (queue event-loop) (make-blocking-queue)
           (timing-wheel event-loop) nil)
     event-loop))
