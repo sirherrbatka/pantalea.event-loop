@@ -18,4 +18,13 @@
   (:local-nicknames
    (#:p #:pantalea.promise))
   (:export
+   #:event
+   #:start!
+   #:stop
+   #:react
+   #:react-with-handler
+   #:obtain-handler
+   #:obtain-handler-with-id
+   #:obtain-handler-without-id
+   #:event-loop
    #:*event-loop*))
