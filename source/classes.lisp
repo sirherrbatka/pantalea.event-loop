@@ -54,6 +54,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :id (random most-positive-fixnum)))
 
+(defclass request-event (event p:locked-callback)
+  ((%timeout
+    :initarg :timeout
+    :reader timeout))
+  (:default-initargs
+   :timeout nil))
+
 (defclass termination-event ()
   ())
 

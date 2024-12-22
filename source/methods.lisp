@@ -16,6 +16,10 @@
     (error (e)
       (log-warn "~a" e))))
 
+(defmethod react ((event request-event) (loop event-loop))
+  (p:call/no-fullfill! event)
+  (setup-handler event loop))
+
 (defmethod react ((event termination-event) (loop event-loop))
   (signal (make-condition 'termination-condition)))
 
