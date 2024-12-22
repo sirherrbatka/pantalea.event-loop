@@ -5,6 +5,10 @@
   (:import-from #:alexandria
                 #:most-positive-fixnum
                 #:if-let
+                #:flatten
+                #:hash-table-values
+                #:hash-table-keys
+                #:eswitch
                 #:switch)
   (:import-from #:log4cl
                 #:log-info
@@ -20,11 +24,12 @@
   (:export
    #:event
    #:start!
-   #:stop
+   #:stop!
    #:react
    #:react-with-handler
    #:obtain-handler
    #:obtain-handler-with-id
    #:obtain-handler-without-id
    #:event-loop
+   #:context
    #:*event-loop*))

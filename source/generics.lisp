@@ -11,3 +11,6 @@
 (defgeneric obtain-handler-without-id (event event-loop))
 (defgeneric start! (event-loop))
 (defgeneric stop! (event-loop))
+(defgeneric running-p (event-loop))
+(defgeneric context (event-loop))
+(defgeneric (setf context) (new-value event-loop))
