@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (setf list (copy-list main-list)))))))
 
 (defmacro define-sequence (spec &body body)
-  (bind ((variable-names (mapcar #'first spec)))
+  (let ((variable-names (mapcar #'first spec)))
     `(let (,@variable-names)
        (declare (ignorable ,@variable-names))
        ,@(mapcar (lambda (spec &aux (body (cddr spec)) (variable-name (first spec)))
