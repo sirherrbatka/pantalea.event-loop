@@ -37,15 +37,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%thread
     :initarg :thread
     :accessor thread)
+   (%request-handlers
+    :initarg :request-handlers
+    :reader request-handlers)
    (%queue
     :initarg :queue
     :accessor queue))
   (:default-initargs
    :thread nil
+   :request-handlers (make-hash-table)
    :context nil
    :timing-wheel nil
    :main-lock (bt2:make-lock)
-   :queue (q:make-blocking-queue)))
+   :queue (make-blocking-queue)))
 
 (defclass event ()
   ((%id
@@ -61,6 +65,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :timeout nil))
 
+(defclass response-event (event)
+  ())
+
 (defclass termination-event ()
   ())
 
@@ -70,4 +77,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass response-handler ()
   ((%request
     :initarg :request
-    :reader request)))
+    :reader request)
+   (%data
+    :initarg :data
+    :reader data)
+   (%context
+    :initarg :context
+    :accessor context))
+  (:default-initargs
+   :context (list)))

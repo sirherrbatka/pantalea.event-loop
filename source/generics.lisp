@@ -37,4 +37,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric running-p (event-loop))
 (defgeneric context (event-loop))
 (defgeneric (setf context) (new-value event-loop))
-(defgeneric setup-handler (event event-loop))
+(defgeneric setup-handler (event event-loop data))

@@ -27,27 +27,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod id ((handler response-handler))
   (id (request handler)))
 
+(defmethod react :around ((event t) (loop event-loop))
+  (let ((*context* (cons event *context*)))
+    (handler-case
+        (call-next-method)
+      (error (e)
+        (log-warn "~a" e)))))
+
 (defmethod react ((event function) (loop event-loop))
-  (handler-case (funcall event)
-    (error (e)
-      (log-warn "~a" e))))
+  (funcall event))
 
 (defmethod react ((event p:promise) (loop event-loop))
-  (handler-case (p:fullfill! event)
-    (error (e)
-      (log-warn "~a" e))))
+  (p:fullfill! event))
 
 (defmethod react ((event event) (loop event-loop))
-  (handler-case (react-with-handler (obtain-handler event loop) event loop)
-    (error (e)
-      (log-warn "~a" e))))
+  (react-with-handler (obtain-handler event loop) event loop))
+
+(defmethod react-with-handler ((handler response-handler)
+                               (event response-handler)
+                               (loop event-loop))
+  (let ((*context* (cons event (context handler))))
+    (p:fullfill! (request handler) (data handler))))
+
+(defmethod setup-handler ((event request-event) (loop event-loop) data)
+  (let ((response-handler (make-instance 'response-handler
+                                         :request event
+                                         :data data
+                                         :context *context*)))
+    (setf (gethash (id event) (request-handlers loop)) response-handler)))
 
 (defmethod react ((event request-event) (loop event-loop))
-  (handler-case
-      (progn (p:call/no-fullfill! event)
-             (setup-handler event loop))
-    (error (e)
-      (log-warn "~a" e))))
+  (setup-handler event loop (p:call/no-fullfill! event)))
 
 (defmethod react ((event termination-event) (loop event-loop))
   (signal (make-condition 'termination-condition)))
@@ -85,7 +95,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                (error (e)
                                  (log-error "Event loop thread crashing under error: ~a" e)))))
           (timing-wheel event-loop) (tw:run 1000 0.01))
-    event-loop)))
+    event-loop))
 
 (defmethod running-p ((event-loop event-loop))
   (bt2:with-lock-held ((main-lock event-loop))
