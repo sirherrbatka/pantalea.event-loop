@@ -27,8 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:bind)
   (:import-from #:pantalea.queue
                 #:make-blocking-queue
-                #:queue-push!
-                #:queue-pop!)
+                #:blocking-queue-push!
+                #:blocking-queue-pop!)
   (:import-from #:alexandria
                 #:most-positive-fixnum
                 #:if-let

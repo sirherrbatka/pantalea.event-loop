@@ -149,7 +149,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= delay 0))
   (if (zerop delay)
-      (queue-push! (queue event-loop) event)
+      (blocking-queue-push! (queue event-loop) event)
       (tw:add! (timing-wheel event-loop)
                delay
                (lambda ()
@@ -170,12 +170,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (when (thread event-loop)
       (error "EVENT-LOOP is already running!"))
     (setf (thread event-loop)
-          (bt2:make-thread (lambda (&aux (queue event-loop) (*event-loop* event-loop))
+          (bt2:make-thread (lambda (&aux (queue (queue event-loop)) (*event-loop* event-loop))
                              (log-info "Event loop started.")
                              (handler-case
                                  (iterate
-                                   (for event = (queue-pop! queue))
-                                   (react event event-loop))
+                                   (react (blocking-queue-pop! queue)
+                                          event-loop))
                                (termination-condition (e)
                                  (declare (ignore e))
                                  (log-info "Event loop thread recieved TERMINATION-CONDITION, will stop."))
