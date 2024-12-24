@@ -40,12 +40,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%request-handlers
     :initarg :request-handlers
     :reader request-handlers)
+   (%general-handlers
+    :initarg :general-handlers
+    :reader general-handlers)
    (%queue
     :initarg :queue
     :accessor queue))
   (:default-initargs
    :thread nil
    :request-handlers (make-hash-table)
+   :general-handlers (make-hash-table)
    :context nil
    :timing-wheel nil
    :main-lock (bt2:make-lock)

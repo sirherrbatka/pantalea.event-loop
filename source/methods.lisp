@@ -56,14 +56,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (cell-notify-success elt event))
   (p:fullfill! (request handler) (data handler)))
 
-(defmethod handler ((loop event-loop) id)
+(defmethod request-handler ((loop event-loop) id)
   (gethash id (request-handlers loop)))
 
-(defmethod (setf handler) (new-value (loop event-loop) id)
+(defmethod (setf request-handler) (new-value (loop event-loop) id)
   (setf (gethash id (request-handlers loop)) new-value))
 
-(defmethod setup-handler ((event request-event) (loop event-loop) data)
-  (setf (handler loop (id event))
+(defmethod setup-response-handler ((event request-event) (loop event-loop) data)
+  (setf (response-handler loop (id event))
         (make-instance 'response-handler
                        :request event
                        :data data)))
@@ -79,18 +79,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (return-from react nil)))
     (call-next-method)))
 
-(defmethod remove-handler ((event event) (loop event-loop))
+(defmethod remove-response-handler ((event event) (loop event-loop))
   (remhash (id event) (request-handlers loop)))
 
 (defmethod react ((event request-event) (loop event-loop))
   (handler-case
       (bind (((:accessors timeout) event))
-        (setup-handler event loop (funcall (callback event)))
+        (setup-response-handler event loop (funcall (callback event)))
         (add! loop
               (lambda ()
                 (unless (completed event)
                   (log-warn "Timeout while waiting on request ~a" event)
-                  (remove-handler event loop)
+                  (remove-response-handler event loop)
                   (cancel! event (make-condition 'timeout-error))))
               (timeout event)))
     (error (e)
@@ -159,7 +159,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   nil)
 
 (defmethod obtain-handler ((event event) (loop event-loop))
-  (or (handler loop (id event))
+  (or (response-handler loop (id event))
       (handler-without-id event loop)))
 
 (defmethod obtain-handler ((event t) (loop event-loop))

@@ -58,7 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:context
    #:event
    #:event-loop
-   #:handler
+   #:response-handler
    #:obtain-handler
    #:obtain-handler-without-id
    #:react
@@ -67,5 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:response-handler
    #:running-p
    #:start!
+   #:setup-response-handler
+   #:remove-response-handler
    #:stop!
    ))
