@@ -44,6 +44,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric attach-on-success! (cell dep))
 (defgeneric attach-on-failure! (cell dep))
 (defgeneric add-cell-event! (cell-event))
-(defgeneric reset-event! (event))
 (defgeneric cell-event-result! (cell-event))
 (defgeneric cancel! (cell-event reason))

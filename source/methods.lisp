@@ -141,16 +141,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (bt2:with-lock-held ((lock event))
     (setf (canceled event) reason)))
 
-(defmethod reset-event! ((event cell-event))
-  (bind (((:accessors dependency dependency-init promise) event))
-    (setf dependency (copy-list dependency-init)
-          promise (p:promise nil))))
-
-(defmethod add! ((event-loop event-loop) (event cell-event) &optional (delay 0))
-  (declare (ignore delay))
-  (reset-event! event)
-  (call-next-method))
-
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= 0 delay))
   (if (zerop delay)
