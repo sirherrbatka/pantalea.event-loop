@@ -43,6 +43,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod react ((event event) (loop event-loop))
   (react-with-handler (obtain-handler event loop) event loop))
 
+(defmethod react-with-handler ((handler (eql nil))
+                               (event response-event)
+                               (loop event-loop))
+  (log-warn "No handler for event ~a" event))
+
 (defmethod react-with-handler ((handler response-handler)
                                (event response-event)
                                (loop event-loop))
@@ -59,9 +64,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                        :data data
                        :context *context*)))
 
+(defmethod react ((event cell-event) (loop event-loop))
+  (bind (((:accessors lock promise canceled failure-dependent) event))
+    (bt2:with-lock-held (lock)
+      (when canceled
+        (p:cancel! promise canceled)
+        (iterate
+          (for elt in failure-dependent)
+          (cell-notify-failure elt event))
+        (return-from react nil))))
+  (call-next-method))
+
+(defmethod remove-handler ((event event) (loop event-loop))
+  (remhash (id event) (request-handlers loop)))
+
 (defmethod react ((event request-event) (loop event-loop))
   (handler-case
-      (setup-handler event loop (funcall (callback event)))
+      (bind (((:accessors timeout) event))
+        (setup-handler event loop (funcall (callback event)))
+        (add! loop
+              (lambda ()
+                (log-warn "Timeout while waiting on request ~a" event)
+                (remove-handler event loop)
+                (cancel! event (make-condition 'timeout-error)))
+              (timeout event)))
     (error (e)
       (iterate
         (for elt in (failure-dependent event))
@@ -91,7 +117,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (bind (((:accessors dependency-init dependency) cell))
         (setf dependency (delete failed dependency))
         (when (endp dependency)
-          (setf dependency (copy-list dependency-init))
           (add-cell-event! cell)))
     (error (e)
       (log-warn "~a" e))))
@@ -108,6 +133,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod react ((event termination-event) (loop event-loop))
   (signal (make-condition 'termination-condition)))
+
+(defmethod cell-event-result! ((event cell-event))
+  (p:force! (promise event)))
+
+(defmethod cancel! ((event cell-event) reason)
+  (bt2:with-lock-held ((lock event))
+    (setf (canceled event) reason)))
+
+(defmethod reset-event! ((event cell-event))
+  (bind (((:accessors dependency dependency-init promise) event))
+    (setf dependency (copy-list dependency-init)
+          promise (p:promise nil))))
+
+(defmethod add! ((event-loop event-loop) (event cell-event) &optional (delay 0))
+  (declare (ignore delay))
+  (reset-event! event)
+  (call-next-method))
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= 0 delay))

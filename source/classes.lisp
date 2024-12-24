@@ -60,7 +60,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defclass cell-event (event)
   ((%promise :initarg :promise
-             :reader promise)
+             :accessor promise)
    (%callback :initarg :callback
               :reader callback)
    (%dependency :initarg :dependency
@@ -72,8 +72,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%failure-dependent :initarg :failure-dependent
                        :accessor failure-dependent)
    (%success-dependent :initarg :success-dependent
-                       :accessor success-dependent))
+                       :accessor success-dependent)
+   (%lock :initarg :lock
+          :reader lock)
+   (%canceled :initarg :canceled
+              :accessor canceled))
   (:default-initargs
+   :canceld nil
+   :lock (bt2:make-lock)
    :delay 0
    :dependency (list)
    :dependency-init (list)
@@ -95,6 +101,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ())
 
 (define-condition termination-condition ()
+  ())
+
+(define-condition timeout-error (error)
   ())
 
 (defclass response-handler ()
