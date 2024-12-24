@@ -55,8 +55,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (cell-notify-success elt event))
   (p:fullfill! (request handler) (data handler)))
 
+(defmethod handler ((loop event-loop) id)
+  (gethash id (request-handlers loop)))
+
+(defmethod (setf handler) (new-value (loop event-loop) id)
+  (setf (gethash id (request-handlers loop)) new-value))
+
 (defmethod setup-handler ((event request-event) (loop event-loop) data)
-  (setf (gethash (id event) (request-handlers loop))
+  (setf (handler loop (id event))
         (make-instance 'response-handler
                        :request event
                        :data data)))
@@ -131,8 +137,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod react ((event termination-event) (loop event-loop))
   (signal (make-condition 'termination-condition)))
 
-(defmethod cell-event-result! ((event cell-event))
-  (p:force! (promise event)))
+(defmethod cell-event-result ((event cell-event))
+  (p:force (promise event)))
 
 (defmethod cancel! ((event cell-event) reason)
   (bt2:with-lock-held ((lock event))
@@ -147,9 +153,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (lambda ()
                  (add! event-loop event)))))
 
+(defmethod obtain-handler-without-id ((event t) (loop event-loop))
+  nil)
+
 (defmethod obtain-handler ((event event) (loop event-loop))
-  (or (obtain-handler-with-id event loop (id event))
-      (obtain-handler-without-id event loop)))
+  (or (handler loop (id event))
+      (handler-without-id event loop)))
 
 (defmethod obtain-handler ((event t) (loop event-loop))
   nil)

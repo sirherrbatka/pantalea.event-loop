@@ -48,14 +48,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:local-nicknames
    (#:p #:pantalea.promise))
   (:export
+   #:*event-loop*
+   #:attach-on-failure!
+   #:attach-on-success!
+   #:cell-event
+   #:cell-event-result
+   #:cell-notify-failure
+   #:cell-notify-success
+   #:context
    #:event
-   #:start!
-   #:stop!
+   #:event-loop
+   #:handler
+   #:obtain-handler
+   #:obtain-handler-without-id
    #:react
    #:react-with-handler
-   #:obtain-handler
-   #:obtain-handler-with-id
-   #:obtain-handler-without-id
-   #:event-loop
-   #:context
-   #:*event-loop*))
+   #:request-event
+   #:response-handler
+   #:running-p
+   #:start!
+   #:stop!
+   ))
