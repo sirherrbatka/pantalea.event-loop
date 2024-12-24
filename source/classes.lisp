@@ -54,8 +54,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defclass event ()
   ((%id
     :initarg :id
-    :accessor id))
+    :accessor id)
+   (%completed
+    :initarg :completed
+    :accessor completed))
   (:default-initargs
+   :completed nil
    :id (random most-positive-fixnum)))
 
 (defclass cell-event (event)

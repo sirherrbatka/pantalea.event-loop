@@ -40,12 +40,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (p:fullfill! event))
 
 (defmethod react ((event event) (loop event-loop))
+  (setf (completed event) t)
   (react-with-handler (obtain-handler event loop) event loop))
 
 (defmethod react-with-handler ((handler (eql nil))
                                (event response-event)
                                (loop event-loop))
-  (log-warn "No handler for event ~a" event))
+  (error "No handler for response-event ~a" event))
 
 (defmethod react-with-handler ((handler response-handler)
                                (event response-event)
@@ -87,9 +88,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (setup-handler event loop (funcall (callback event)))
         (add! loop
               (lambda ()
-                (log-warn "Timeout while waiting on request ~a" event)
-                (remove-handler event loop)
-                (cancel! event (make-condition 'timeout-error)))
+                (unless (completed event)
+                  (log-warn "Timeout while waiting on request ~a" event)
+                  (remove-handler event loop)
+                  (cancel! event (make-condition 'timeout-error))))
               (timeout event)))
     (error (e)
       (iterate
