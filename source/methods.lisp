@@ -28,11 +28,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (id (request handler)))
 
 (defmethod react :around ((event t) (loop event-loop))
-  (let ((*context* (cons event *context*)))
-    (handler-case
-        (call-next-method)
-      (error (e)
-        (log-warn "~a" e)))))
+  (handler-case
+      (call-next-method)
+    (error (e)
+      (log-warn "~a" e))))
 
 (defmethod react ((event function) (loop event-loop))
   (funcall event))
@@ -51,20 +50,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod react-with-handler ((handler response-handler)
                                (event response-event)
                                (loop event-loop))
-  (let ((*context* (cons event (context handler))))
-    (iterate
-      (for elt in (success-dependent event))
-      (cell-notify-success elt event))
-    (p:fullfill! (request handler) (data handler))))
+  (iterate
+    (for elt in (success-dependent event))
+    (cell-notify-success elt event))
+  (p:fullfill! (request handler) (data handler)))
 
 (defmethod setup-handler ((event request-event) (loop event-loop) data)
   (setf (gethash (id event) (request-handlers loop))
         (make-instance 'response-handler
                        :request event
-                       :data data
-                       :context *context*)))
+                       :data data)))
 
-(defmethod react ((event cell-event) (loop event-loop))
+(defmethod react :around ((event cell-event) (loop event-loop))
   (bind (((:accessors lock promise canceled failure-dependent) event))
     (bt2:with-lock-held (lock)
       (when canceled
@@ -72,8 +69,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (iterate
           (for elt in failure-dependent)
           (cell-notify-failure elt event))
-        (return-from react nil))))
-  (call-next-method))
+        (return-from react nil)))
+    (call-next-method)))
 
 (defmethod remove-handler ((event event) (loop event-loop))
   (remhash (id event) (request-handlers loop)))

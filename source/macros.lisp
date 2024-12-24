@@ -29,23 +29,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     `(let (,@variable-names)
        (declare (ignorable ,@variable-names))
        ,@(mapcar (lambda (spec &aux
-                            (arguments (second spec))
-                            (body (cddr spec))
-                            (variable-name (first spec))
-                            (success-list (getf arguments :success))
-                            (failure-list (getf arguments :failure))
+                            (arguments (third spec))
                             (timeout (getf arguments :timeout))
-                            (delay (getf arguments :delay)))
-                   (assert (endp (intersection success-list failure-list)))
+                            (body (cdddr spec))
+                            (variable-name (first spec))
+                            (class (getf arguments :class)))
                    `(setf ,variable-name
                           ,(if timeout
-                               `(make-instance 'request-event
+                               `(make-instance ',(or class (if timeout 'request-event 'cell-event))
                                  :callback (lambda () ,@body)
-                                 :delay (or ,delay 0)
-                                 :timeout ,timeout)
-                               `(make-instance 'cell-event
-                                 :callback (lambda () ,@body)
-                                 :delay (or ,delay 0)))))
+                                 ,@arguments))))
                  spec)
        ,@(mapcar
           (lambda (spec &aux

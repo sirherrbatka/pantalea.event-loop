@@ -112,9 +112,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :reader request)
    (%data
     :initarg :data
-    :reader data)
-   (%context
-    :initarg :context
-    :accessor context))
+    :reader data))
   (:default-initargs
    :context (list)))
