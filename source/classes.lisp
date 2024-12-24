@@ -58,7 +58,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :id (random most-positive-fixnum)))
 
-(defclass request-event (event p:locked-callback)
+(defclass cell-event (event)
+  ((%promise :initarg :promise
+             :reader promise)
+   (%callback :initarg :callback
+              :reader callback)
+   (%dependency :initarg :dependency
+                :accessor dependency)
+   (%delay :initarg :delay
+           :reader delay)
+   (%dependency-init :initarg :dependency-init
+                     :accessor dependency-init)
+   (%failure-dependent :initarg :failure-dependent
+                       :accessor failure-dependent)
+   (%success-dependent :initarg :success-dependent
+                       :accessor success-dependent))
+  (:default-initargs
+   :delay 0
+   :dependency (list)
+   :dependency-init (list)
+   :promise (p:promise nil)
+   :success-dependent (list)
+   :failure-dependent (list)))
+
+(defclass request-event (cell-event)
   ((%timeout
     :initarg :timeout
     :reader timeout))

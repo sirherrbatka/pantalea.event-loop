@@ -38,3 +38,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric context (event-loop))
 (defgeneric (setf context) (new-value event-loop))
 (defgeneric setup-handler (event event-loop data))
+(defgeneric cell-notify-failure (cell failed))
+(defgeneric cell-notify-success (cell succeded))
+(defgeneric attach-on-success! (cell dep))
+(defgeneric attach-on-failure! (cell dep))
+(defgeneric add-cell-event! (cell-event))

@@ -44,20 +44,67 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (react-with-handler (obtain-handler event loop) event loop))
 
 (defmethod react-with-handler ((handler response-handler)
-                               (event response-handler)
+                               (event response-event)
                                (loop event-loop))
   (let ((*context* (cons event (context handler))))
+    (iterate
+      (for elt in (success-dependent event))
+      (cell-notify-success elt event))
     (p:fullfill! (request handler) (data handler))))
 
 (defmethod setup-handler ((event request-event) (loop event-loop) data)
-  (let ((response-handler (make-instance 'response-handler
-                                         :request event
-                                         :data data
-                                         :context *context*)))
-    (setf (gethash (id event) (request-handlers loop)) response-handler)))
+  (setf (gethash (id event) (request-handlers loop))
+        (make-instance 'response-handler
+                       :request event
+                       :data data
+                       :context *context*)))
 
 (defmethod react ((event request-event) (loop event-loop))
-  (setup-handler event loop (p:call/no-fullfill! event)))
+  (handler-case
+      (setup-handler event loop (funcall (callback event)))
+    (error (e)
+      (iterate
+        (for elt in (failure-dependent event))
+        (cell-notify-failure elt event))
+      (p:cancel! (promise event) e)
+      (signal e))))
+
+(defmethod react ((event cell-event) (loop event-loop))
+  (handler-case
+      (progn
+        (p:fullfill! (promise event) (funcall (callback event)))
+        (iterate
+          (for elt in (success-dependent event))
+          (cell-notify-success elt event)))
+    (error (e)
+      (iterate
+        (for elt in (failure-dependent event))
+        (cell-notify-failure elt event))
+      (p:fullfill! (promise event) e)
+      (signal e))))
+
+(defmethod add-cell-event! ((event cell-event))
+  (add! *event-loop* event (delay event)))
+
+(defmethod cell-notify-failure ((cell cell-event) failed)
+  (handler-case
+      (bind (((:accessors dependency-init dependency) cell))
+        (setf dependency (delete failed dependency))
+        (when (endp dependency)
+          (setf dependency (copy-list dependency-init))
+          (add-cell-event! cell)))
+    (error (e)
+      (log-warn "~a" e))))
+
+(defmethod cell-notify-success ((cell cell-event) failed)
+  (handler-case
+      (bind (((:accessors dependency-init dependency) cell))
+        (setf dependency (delete failed dependency))
+        (when (endp dependency)
+          (setf dependency (copy-list dependency-init))
+          (add-cell-event! cell)))
+    (error (e)
+      (log-warn "~a" e))))
 
 (defmethod react ((event termination-event) (loop event-loop))
   (signal (make-condition 'termination-condition)))
@@ -112,3 +159,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (queue event-loop) (make-blocking-queue)
           (timing-wheel event-loop) nil)
     event-loop))
+
+(defmethod attach-on-success! ((cell cell-event) (dep cell-event))
+  (push dep (success-dependent cell))
+  (push cell (dependency dep))
+  (push cell (dependency-init dep)))
+
+(defmethod attach-on-failure! ((cell cell-event) (dep cell-event))
+  (push dep (failure-dependent cell))
+  (push cell (dependency dep))
+  (push cell (dependency-init dep)))

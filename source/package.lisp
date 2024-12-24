@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:if-let
                 #:flatten
                 #:hash-table-values
+                #:rcurry
                 #:hash-table-keys
                 #:eswitch
                 #:switch)

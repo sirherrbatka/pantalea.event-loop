@@ -24,46 +24,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(defun make-sequence-link-callback (promise delay main-list)
-  (let ((lock (bt2:make-lock))
-        (list (copy-list main-list)))
-    (lambda (&optional p:*value*)
-      (bt2:with-lock-held (lock)
-        (when (progn
-                (setf list (delete (first p:*promises*) list :test #'eq))
-                (endp list))
-          (add! *event-loop* promise (or delay 0))
-          (setf list (copy-list main-list)))))))
-
 (defmacro define-sequence (spec &body body)
   (let ((variable-names (mapcar #'first spec)))
     `(let (,@variable-names)
        (declare (ignorable ,@variable-names))
-       ,@(mapcar (lambda (spec &aux (body (cddr spec)) (variable-name (first spec)))
+       ,@(mapcar (lambda (spec &aux
+                            (arguments (second spec))
+                            (body (cddr spec))
+                            (variable-name (first spec))
+                            (success-list (getf arguments :success))
+                            (failure-list (getf arguments :failure))
+                            (timeout (getf arguments :timeout))
+                            (delay (getf arguments :delay)))
+                   (assert (endp (intersection success-list failure-list)))
                    `(setf ,variable-name
-                          (make-instance 'p:locked-callback
-                                         :callback (lambda (&optional (p:*value* nil p:*value-bound-p*))
-                                                     ,@body)
-                                         :result nil
-                                         :successp nil
-                                         :fullfilled nil)))
+                          ,(if timeout
+                               `(make-instance 'request-event
+                                 :callback (lambda () ,@body)
+                                 :delay (or ,delay 0)
+                                 :timeout ,timeout)
+                               `(make-instance 'cell-event
+                                 :callback (lambda () ,@body)
+                                 :delay (or ,delay 0)))))
                  spec)
        ,@(mapcar
           (lambda (spec &aux
-                     (dependency (second spec))
+                     (arguments (second spec))
                      (name (first spec))
-                     (success-list (getf  dependency :success))
-                     (failure-list (getf  dependency :failure))
-                     (delay (getf  dependency :delay))
-                     (complete-list (append success-list failure-list)))
-            (assert (endp (intersection success-list failure-list)))
-            (if (endp complete-list)
-                nil
-                `(let ((callback
-                         (make-sequence-link-callback ,name ,delay (list ,@complete-list))))
-                   ,@(mapcar (lambda (d) `(p:attach-on-success! ,d callback))
-                             success-list)
-                   ,@(mapcar (lambda (d) `(p:attach-on-failure! ,d callback))
-                             failure-list))))
+                     (success-list (getf arguments :success))
+                     (failure-list (getf arguments :failure)))
+            `(progn
+               ,@(mapcar (lambda (d) `(attach-on-success! ,d ,name))
+                         success-list)
+               ,@(mapcar (lambda (d) `(attach-on-failure! ,d ,name))
+                         failure-list)))
           spec)
        ,@body)))
