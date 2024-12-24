@@ -34,9 +34,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   :serial T
   :pathname "source"
   :components ((:file "package")
+               (:file "macros")
                (:file "generics")
                (:file "classes")
                (:file "variables")
-               (:file "macros")
                (:file "methods")
                ))
