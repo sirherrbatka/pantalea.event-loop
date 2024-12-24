@@ -86,7 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%canceled :initarg :canceled
               :accessor canceled))
   (:default-initargs
-   :canceld nil
+   :canceled nil
    :lock (bt2:make-lock)
    :delay 0
    :dependency (list)

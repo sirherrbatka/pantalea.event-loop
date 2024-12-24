@@ -84,11 +84,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod react ((event request-event) (loop event-loop))
   (handler-case
-      (bind (((:accessors timeout) event))
+      (bind (((:accessors timeout completed lock) event))
         (setup-response-handler event loop (funcall (callback event)))
         (add! loop
               (lambda ()
-                (unless (completed event)
+                (unless (bt2:with-lock-held (lock) (completed event))
                   (log-warn "Timeout while waiting on request ~a" event)
                   (remove-response-handler event loop)
                   (cancel! event (make-condition 'timeout-error))))
@@ -147,7 +147,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (setf (canceled event) reason)))
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
-  (assert (>= 0 delay))
+  (assert (>= delay 0))
   (if (zerop delay)
       (queue-push! (queue event-loop) event)
       (tw:add! (timing-wheel event-loop)

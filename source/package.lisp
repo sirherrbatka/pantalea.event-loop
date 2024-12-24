@@ -70,4 +70,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:setup-response-handler
    #:remove-response-handler
    #:stop!
+   #:event-sequence
+   #:add!
    ))

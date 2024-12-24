@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(defmacro define-sequence (spec &body body)
+(defmacro event-sequence (spec &body body)
   (let ((variable-names (mapcar #'first spec)))
     `(let (,@variable-names)
        (declare (ignorable ,@variable-names))
@@ -35,10 +35,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                             (variable-name (first spec))
                             (class (getf arguments :class)))
                    `(setf ,variable-name
-                          ,(if timeout
-                               `(make-instance ',(or class (if timeout 'request-event 'cell-event))
-                                 :callback (lambda () ,@body)
-                                 ,@arguments))))
+                          (make-instance ',(or class (if timeout 'request-event 'cell-event))
+                                         :callback (lambda () ,@body)
+                                         ,@arguments)))
                  spec)
        ,@(mapcar
           (lambda (spec &aux
