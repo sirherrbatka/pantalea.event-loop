@@ -52,3 +52,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                          failure-list)))
           spec)
        ,@body)))
+
+(defmacro on-event-loop ((&key (delay 0)) &body body)
+  `(add! *event-loop* (lambda () ,@body) ,delay))

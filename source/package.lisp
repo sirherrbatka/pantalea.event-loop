@@ -72,4 +72,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:stop!
    #:event-sequence
    #:add!
+   #:on-event-loop
    ))

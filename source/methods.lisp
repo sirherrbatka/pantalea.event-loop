@@ -86,13 +86,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (handler-case
       (bind (((:accessors timeout completed lock) event))
         (setup-response-handler event loop (funcall (callback event)))
-        (add! loop
-              (lambda ()
-                (unless (bt2:with-lock-held (lock) (completed event))
+        (on-event-loop (:delay (timeout event))
+          (unless (bt2:with-lock-held (lock) (completed event))
                   (log-warn "Timeout while waiting on request ~a" event)
                   (remove-response-handler event loop)
-                  (cancel! event (make-condition 'timeout-error))))
-              (timeout event)))
+                  (cancel! event (make-condition 'timeout-error)))))
     (error (e)
       (iterate
         (for elt in (failure-dependent event))
