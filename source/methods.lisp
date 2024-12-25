@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (handler-case
       (call-next-method)
     (error (e)
-      (log-warn "~a" e))))
+      (log:warn "~a" e))))
 
 (defmethod react ((event function) (loop event-loop))
   (funcall event))
@@ -122,7 +122,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (when (endp dependency)
           (add-cell-event! cell)))
     (error (e)
-      (log-warn "~a" e))))
+      (log:warn "~a" e))))
 
 (defmethod cell-notify-success ((cell cell-event) failed)
   (handler-case
@@ -132,7 +132,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (setf dependency (copy-list dependency-init))
           (add-cell-event! cell)))
     (error (e)
-      (log-warn "~a" e))))
+      (log:warn "~a" e))))
 
 (defmethod react ((event termination-event) (loop event-loop))
   (signal (make-condition 'termination-condition)))
@@ -173,16 +173,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (error "EVENT-LOOP is already running!"))
     (setf (thread event-loop)
           (bt2:make-thread (lambda (&aux (queue (queue event-loop)) (*event-loop* event-loop))
-                             (log-info "Event loop started.")
+                             (log:info "Event loop started.")
                              (handler-case
                                  (iterate
                                    (react (blocking-queue-pop! queue)
                                           event-loop))
                                (termination-condition (e)
                                  (declare (ignore e))
-                                 (log-info "Event loop thread recieved TERMINATION-CONDITION, will stop."))
+                                 (log:info "Event loop thread recieved TERMINATION-CONDITION, will stop."))
                                (error (e)
-                                 (log-error "Event loop thread crashing under error: ~a" e)))))
+                                 (log:error "Event loop thread crashing under error: ~a" e)))))
           (timing-wheel event-loop) (tw:run 1000 0.01))
     event-loop))
 

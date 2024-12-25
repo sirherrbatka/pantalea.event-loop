@@ -38,11 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:hash-table-keys
                 #:eswitch
                 #:switch)
-  (:import-from #:log4cl
-                #:log-info
-                #:log-debug
-                #:log-error
-                #:log-warn)
   (:local-nicknames
    (#:tw #:pantalea.timing-wheel))
   (:local-nicknames
