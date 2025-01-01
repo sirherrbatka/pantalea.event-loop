@@ -65,7 +65,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:setup-response-handler
    #:remove-response-handler
    #:stop!
-   #:event-sequence
+   #:events-sequence
    #:add!
    #:on-event-loop
    ))

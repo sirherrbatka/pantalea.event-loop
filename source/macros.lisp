@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(defmacro event-sequence (spec &body body)
+(defmacro events-sequence (spec &body body)
   (let ((variable-names (mapcar #'first spec)))
     `(let (,@variable-names)
        (declare (ignorable ,@variable-names))
