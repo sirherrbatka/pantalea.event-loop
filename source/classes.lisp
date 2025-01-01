@@ -90,6 +90,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :canceled nil
    :lock (bt2:make-lock)
+   :event-loop *event-loop*
    :delay 0
    :dependency (list)
    :dependency-init (list)
