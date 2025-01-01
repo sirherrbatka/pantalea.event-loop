@@ -88,7 +88,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (:default-initargs
    :canceled nil
    :lock (bt2:make-lock)
-   :event-loop *event-loop*
+   :event-loop nil
    :delay 0
    :dependency (list)
    :promise (p:promise nil)

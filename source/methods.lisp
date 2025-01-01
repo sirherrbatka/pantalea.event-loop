@@ -116,7 +116,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (signal e)))))
 
 (defmethod add-cell-event! ((event cell-event))
-  (add! (event-loop event) event (delay event)))
+  (add! (or (event-loop event) *event-loop*) event (delay event)))
 
 (defmethod cell-notify-failure ((cell cell-event) failed)
   (handler-case
