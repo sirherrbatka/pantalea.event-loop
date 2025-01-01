@@ -24,34 +24,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(defmacro event-sequence (spec &body body)
-  (let ((variable-names (mapcar #'first spec)))
-    `(let (,@variable-names)
-       (declare (ignorable ,@variable-names))
-       ,@(mapcar (lambda (spec &aux
-                            (arguments (third spec))
-                            (timeout (getf arguments :timeout))
-                            (body (cdddr spec))
-                            (variable-name (first spec))
-                            (class (getf arguments :class)))
-                   `(setf ,variable-name
-                          (make-instance ',(or class (if timeout 'request-event 'cell-event))
-                                         :callback (lambda () ,@body)
-                                         ,@arguments)))
-                 spec)
-       ,@(mapcar
-          (lambda (spec &aux
-                     (arguments (second spec))
-                     (name (first spec))
-                     (success-list (getf arguments :success))
-                     (failure-list (getf arguments :failure)))
-            `(progn
-               ,@(mapcar (lambda (d) `(attach-on-success! ,d ,name))
-                         success-list)
-               ,@(mapcar (lambda (d) `(attach-on-failure! ,d ,name))
-                         failure-list)))
-          spec)
-       ,@body)))
+(defmacro event-sequence (event-loop spec &body body)
+  (alexandria:once-only (event-loop)
+    (let ((variable-names (mapcar #'first spec)))
+      `(let (,@variable-names)
+         (declare (ignorable ,@variable-names))
+         ,@(mapcar (lambda (spec &aux
+                              (arguments (third spec))
+                              (timeout (getf arguments :timeout))
+                              (body (cdddr spec))
+                              (variable-name (first spec))
+                              (class (getf arguments :class)))
+                     `(setf ,variable-name
+                            (make-instance ',(or class (if timeout 'request-event 'cell-event))
+                                           :callback (lambda () ,@body)
+                                           :event-loop ,event-loop
+                                           ,@arguments)))
+                   spec)
+         ,@(mapcar
+            (lambda (spec &aux
+                       (arguments (second spec))
+                       (name (first spec))
+                       (success-list (getf arguments :success))
+                       (failure-list (getf arguments :failure)))
+              `(progn
+                 ,@(mapcar (lambda (d) `(attach-on-success! ,d ,name))
+                           success-list)
+                 ,@(mapcar (lambda (d) `(attach-on-failure! ,d ,name))
+                           failure-list)))
+            spec)
+         ,@body))))
 
 (defmacro on-event-loop ((&key (delay 0)) &body body)
   `(add! *event-loop* (lambda () ,@body) ,delay))

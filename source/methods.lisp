@@ -113,7 +113,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (signal e))))
 
 (defmethod add-cell-event! ((event cell-event))
-  (add! *event-loop* event (delay event)))
+  (add! (event-loop event) event (delay event)))
 
 (defmethod cell-notify-failure ((cell cell-event) failed)
   (handler-case
@@ -126,11 +126,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod cell-notify-success ((cell cell-event) failed)
   (handler-case
-      (bind (((:accessors dependency-init dependency) cell))
-        (setf dependency (delete failed dependency))
-        (when (endp dependency)
-          (setf dependency (copy-list dependency-init))
-          (add-cell-event! cell)))
+      (bind (((:accessors dependency-init dependency lock) cell))
+        (bt:with-lock-held (lock)
+          (setf dependency (delete failed dependency))
+          (when (endp dependency)
+            (setf dependency (copy-list dependency-init))
+            (add-cell-event! cell))))
     (error (e)
       (log:warn "~a" e))))
 

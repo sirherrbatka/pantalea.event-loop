@@ -84,7 +84,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    (%lock :initarg :lock
           :reader lock)
    (%canceled :initarg :canceled
-              :accessor canceled))
+              :accessor canceled)
+   (%event-loop :initarg :event-loop
+                :reader event-loop))
   (:default-initargs
    :canceled nil
    :lock (bt2:make-lock)
