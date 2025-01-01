@@ -75,8 +75,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 :accessor dependency)
    (%delay :initarg :delay
            :reader delay)
-   (%dependency-init :initarg :dependency-init
-                     :accessor dependency-init)
    (%failure-dependent :initarg :failure-dependent
                        :accessor failure-dependent)
    (%success-dependent :initarg :success-dependent
@@ -93,7 +91,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :event-loop *event-loop*
    :delay 0
    :dependency (list)
-   :dependency-init (list)
    :promise (p:promise nil)
    :success-dependent (list)
    :failure-dependent (list)))

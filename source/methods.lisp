@@ -70,13 +70,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod react :around ((event cell-event) (loop event-loop))
   (bind (((:accessors lock promise canceled failure-dependent) event))
-    (bt2:with-lock-held (lock)
-      (when canceled
-        (p:cancel! promise canceled)
-        (iterate
-          (for elt in failure-dependent)
-          (cell-notify-failure elt event))
-        (return-from react nil)))
+    (when canceled
+      (p:cancel! promise canceled)
+      (iterate
+        (for elt in failure-dependent)
+        (cell-notify-failure elt event))
+      (return-from react nil))
     (call-next-method)))
 
 (defmethod remove-response-handler ((event event) (loop event-loop))
@@ -88,49 +87,53 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (setup-response-handler event loop (funcall (callback event)))
         (on-event-loop (:delay (timeout event))
           (unless (bt2:with-lock-held (lock) (completed event))
-                  (log-warn "Timeout while waiting on request ~a" event)
+                  (log:warn "Timeout while waiting on request ~a" event)
                   (remove-response-handler event loop)
                   (cancel! event (make-condition 'timeout-error)))))
     (error (e)
       (iterate
-        (for elt in (failure-dependent event))
+        (for elt in (bt2:with-lock-held ((lock event))
+                      (failure-dependent event)))
         (cell-notify-failure elt event))
       (p:cancel! (promise event) e)
       (signal e))))
 
 (defmethod react ((event cell-event) (loop event-loop))
-  (handler-case
-      (progn
-        (p:fullfill! (promise event) (funcall (callback event)))
+  (bind (((:accessors lock) event))
+    (handler-case
+        (progn
+          (p:fullfill! (promise event) (funcall (callback event)))
+          (iterate
+            (for elt in (bt2:with-lock-held (lock)
+                          (success-dependent event)))
+            (cell-notify-success elt event)))
+      (error (e)
         (iterate
-          (for elt in (success-dependent event))
-          (cell-notify-success elt event)))
-    (error (e)
-      (iterate
-        (for elt in (failure-dependent event))
-        (cell-notify-failure elt event))
-      (p:fullfill! (promise event) e)
-      (signal e))))
+          (for elt in (bt2:with-lock-held (lock)
+                        (failure-dependent event)))
+          (cell-notify-failure elt event))
+        (p:fullfill! (promise event) e)
+        (signal e)))))
 
 (defmethod add-cell-event! ((event cell-event))
   (add! (event-loop event) event (delay event)))
 
 (defmethod cell-notify-failure ((cell cell-event) failed)
   (handler-case
-      (bind (((:accessors dependency-init dependency) cell))
-        (setf dependency (delete failed dependency))
-        (when (endp dependency)
-          (add-cell-event! cell)))
+      (bind (((:accessors dependency lock) cell))
+        (bt2:with-lock-held (lock)
+          (setf dependency (delete failed dependency))
+          (when (endp dependency)
+            (add-cell-event! cell))))
     (error (e)
       (log:warn "~a" e))))
 
 (defmethod cell-notify-success ((cell cell-event) failed)
   (handler-case
-      (bind (((:accessors dependency-init dependency lock) cell))
+      (bind (((:accessors dependency lock) cell))
         (bt:with-lock-held (lock)
           (setf dependency (delete failed dependency))
           (when (endp dependency)
-            (setf dependency (copy-list dependency-init))
             (add-cell-event! cell))))
     (error (e)
       (log:warn "~a" e))))
@@ -205,10 +208,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod attach-on-success! ((cell cell-event) (dep cell-event))
   (push dep (success-dependent cell))
-  (push cell (dependency dep))
-  (push cell (dependency-init dep)))
+  (push cell (dependency dep)))
 
 (defmethod attach-on-failure! ((cell cell-event) (dep cell-event))
   (push dep (failure-dependent cell))
-  (push cell (dependency dep))
-  (push cell (dependency-init dep)))
+  (push cell (dependency dep)))
