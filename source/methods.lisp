@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod react-with-handler ((handler (eql nil))
                                (event response-event)
                                (loop event-loop))
-  (error "No handler for response-event ~a" event))
+  (error 'no-handler-error "No handler for response-event ~a" event))
 
 (defmethod react-with-handler ((handler response-handler)
                                (event response-event)
@@ -116,7 +116,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (signal e)))))
 
 (defmethod add-cell-event! ((event cell-event))
-  (add! (or (event-loop event) *event-loop*) event (delay event)))
+  (add! (or (event-loop event) *event-loop*)
+        event
+        (delay event)))
 
 (defmethod cell-notify-failure ((cell cell-event) failed)
   (handler-case
@@ -150,12 +152,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= delay 0))
-  (if (zerop delay)
-      (blocking-queue-push! (queue event-loop) event)
-      (tw:add! (timing-wheel event-loop)
-               delay
-               (lambda ()
-                 (add! event-loop event 0))))
+  (bt2:with-lock-held ((main-lock event-loop))
+    (unless (thread event-loop)
+      (error "EVENT-LOOP is not running!"))
+    (if (zerop delay)
+        (blocking-queue-push! (queue event-loop) event)
+        (tw:add! (timing-wheel event-loop)
+                 delay
+                 (lambda ()
+                   (add! event-loop event 0)))))
   event-loop)
 
 (defmethod add! ((event-loop event-loop) (event cell-event) &optional (delay (delay event)))
@@ -174,7 +179,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod start! ((event-loop event-loop))
   (bt2:with-lock-held ((main-lock event-loop))
     (when (thread event-loop)
-      (error "EVENT-LOOP is already running!"))
+      (error 'event-loop-already-running "EVENT-LOOP is already running!"))
     (setf (thread event-loop)
           (bt2:make-thread (lambda (&aux (queue (queue event-loop)) (*event-loop* event-loop))
                              (log:info "Event loop started.")
@@ -197,7 +202,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod stop! ((event-loop event-loop))
   (bt2:with-lock-held ((main-lock event-loop))
     (unless (thread event-loop)
-      (error "EVENT-LOOP is not running!"))
+      (error 'event-loop-not-started-error "EVENT-LOOP is not running!"))
     (tw:stop! (timing-wheel event-loop))
     (add! event-loop (make-instance 'termination-event))
     (bt2:join-thread (thread event-loop))

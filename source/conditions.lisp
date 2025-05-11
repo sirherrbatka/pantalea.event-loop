@@ -21,23 +21,17 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
 
-(asdf:defsystem #:pantalea.event-loop
-  :name "event-loop"
-  :depends-on (#:bordeaux-threads
-               #:iterate
-               #:metabang-bind
-               #:alexandria
-               #:pantalea.queue
-               #:pantalea.timing-wheel
-               #:log4cl
-               #:pantalea.promise)
-  :serial T
-  :pathname "source"
-  :components ((:file "package")
-               (:file "macros")
-               (:file "conditions")
-               (:file "generics")
-               (:file "classes")
-               (:file "variables")
-               (:file "methods")
-               ))
+(cl:in-package #:pantalea.event-loop)
+
+
+(define-condition event-loop-error (error)
+  ())
+
+(define-condition event-loop-not-started-error (event-loop-error)
+  ())
+
+(define-condition event-loop-already-running (event-loop-error)
+  ())
+
+(define-condition no-handler-error (event-loop-error)
+  ())
