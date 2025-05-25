@@ -53,5 +53,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           spec)
        ,@body)))
 
-(defmacro on-event-loop ((&key (delay 0)) &body body)
-  `(add! *event-loop* (lambda () ,@body) ,delay))
+(defmacro on-event-loop ((&key (delay 0) (event-loop *event-loop*)) &body body)
+  `(let ((*event-loop* ,event-loop))
+     (add! *event-loop* (lambda () ,@body) ,delay)))
