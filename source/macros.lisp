@@ -28,28 +28,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (let ((variable-names (mapcar #'first spec)))
     `(let (,@variable-names)
        (declare (ignorable ,@variable-names))
-       ,@(mapcar (lambda (spec &aux
-                            (arguments (third spec))
-                            (timeout (getf arguments :timeout))
-                            (body (cdddr spec))
-                            (variable-name (first spec))
-                            (class (getf arguments :class)))
-                   `(setf ,variable-name
-                          (make-instance ',(or class (if timeout 'request-event 'cell-event))
-                                         :callback (lambda () ,@body)
-                                         ,@arguments)))
+       ,@(mapcar (lambda (spec)
+                   (bind (((variable-name args . body) spec)
+                          ((&key success failure (timeout nil timeout-bound-p) (delay 0) (class (if timeout-bound-p 'request-event 'cell-event)))
+                           args)
+                          (combined (append success failure))
+                          (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym))
+                                           combined)))
+                     `(setf ,variable-name
+                            (make-instance ',class
+                                           :delay ,delay
+                                           :callback ,(if combined
+                                                         `(lambda ()
+                                                            (let ,(mapcar #'list gensyms combined)
+                                                              (symbol-macrolet ,(mapcar (lambda (gensym symbol)
+                                                                                          `(,symbol (cell-event-result ,gensym)))
+                                                                                 gensyms
+                                                                                 combined)
+                                                                ,@body)))
+                                                         `(lambda () ,@body))
+                                           ,@(when timeout-bound-p (list :timeout timeout))))))
                  spec)
        ,@(mapcar
-          (lambda (spec &aux
-                     (arguments (second spec))
-                     (name (first spec))
-                     (success-list (getf arguments :success))
-                     (failure-list (getf arguments :failure)))
-            `(progn
-               ,@(mapcar (lambda (d) `(attach-on-success! ,d ,name))
-                         success-list)
-               ,@(mapcar (lambda (d) `(attach-on-failure! ,d ,name))
-                         failure-list)))
+          (lambda (spec)
+            (bind (((name args . body) spec)
+                   ((&key success  failure &allow-other-keys) args))
+              (declare (ignore body))
+              `(progn
+                 ,@(mapcar (lambda (d) `(attach-on-success! ,d ,name))
+                           success)
+                 ,@(mapcar (lambda (d) `(attach-on-failure! ,d ,name))
+                           failure))))
           spec)
        ,@body)))
 

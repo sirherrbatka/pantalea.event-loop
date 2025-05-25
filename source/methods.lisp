@@ -83,8 +83,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod react ((event request-event) (loop event-loop))
   (handler-case
-      (bind (((:accessors timeout completed lock) event))
-        (setup-response-handler event loop (funcall (callback event)))
+      (bind (((:accessors timeout completed lock callback) event))
+        (setup-response-handler event loop (funcall callback))
         (on-event-loop (:delay (timeout event))
           (unless (bt2:with-lock-held (lock) (completed event))
                   (log:warn "Timeout while waiting on request ~a" event)
@@ -96,24 +96,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                       (failure-dependent event)))
         (cell-notify-failure elt event))
       (p:cancel! (promise event) e)
-      (signal e))))
+      (error e))))
 
 (defmethod react ((event cell-event) (loop event-loop))
-  (bind (((:accessors lock) event))
+  (bind (((:accessors lock callback promise) event))
     (handler-case
         (progn
-          (p:fullfill! (promise event) (funcall (callback event)))
+          (p:fullfill! promise (funcall callback))
           (iterate
             (for elt in (bt2:with-lock-held (lock)
                           (success-dependent event)))
             (cell-notify-success elt event)))
       (error (e)
+        (p:cancel! (promise event) e)
         (iterate
           (for elt in (bt2:with-lock-held (lock)
                         (failure-dependent event)))
           (cell-notify-failure elt event))
         (p:fullfill! (promise event) e)
-        (signal e)))))
+        (error e)))))
 
 (defmethod add-cell-event! ((event cell-event))
   (add! (or (event-loop event) *event-loop*)
@@ -133,7 +134,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod cell-notify-success ((cell cell-event) failed)
   (handler-case
       (bind (((:accessors dependency lock) cell))
-        (bt:with-lock-held (lock)
+        (bt2:with-lock-held (lock)
           (setf dependency (delete failed dependency))
           (when (endp dependency)
             (add-cell-event! cell))))
@@ -148,7 +149,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod cancel! ((event cell-event) reason)
   (bt2:with-lock-held ((lock event))
-    (setf (canceled event) reason)))
+    (setf (canceled event) reason))
+  (p:fullfill! (promise event) reason)
+  (iterate
+    (for elt in (bt2:with-lock-held ((lock event))
+                  (failure-dependent event)))
+    (cell-notify-failure elt event)))
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= delay 0))
@@ -200,7 +206,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (unless (thread event-loop)
       (error 'event-loop-not-started-error "EVENT-LOOP is not running!"))
     (tw:stop! (timing-wheel event-loop))
-    (add! event-loop (make-instance 'termination-event))
+    (blocking-queue-push! (queue event-loop) (make-instance 'termination-event))
     (bt2:join-thread (thread event-loop))
     (setf (thread event-loop) nil
           (queue event-loop) (make-blocking-queue)
