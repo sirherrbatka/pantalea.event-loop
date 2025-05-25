@@ -159,12 +159,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (blocking-queue-push! (queue event-loop) event)
         (tw:add! (timing-wheel event-loop)
                  delay
-                 (lambda ()
-                   (add! event-loop event 0)))))
-  event-loop)
-
-(defmethod add! ((event-loop event-loop) (event cell-event) &optional (delay (delay event)))
-  (call-next-method event-loop event delay))
+                 (lambda () (add! event-loop event 0)))))
+  event)
 
 (defmethod obtain-handler-without-id ((event t) (loop event-loop))
   nil)
