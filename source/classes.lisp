@@ -118,8 +118,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   ((%request
     :initarg :request
     :reader request)
-   (%data
-    :initarg :data
-    :reader data))
+   (%payload
+    :initarg :payload
+    :reader payload))
   (:default-initargs
    :context (list)))

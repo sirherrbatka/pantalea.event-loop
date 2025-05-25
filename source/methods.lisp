@@ -51,10 +51,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod react-with-handler ((handler response-handler)
                                (event response-event)
                                (loop event-loop))
-  (iterate
-    (for elt in (success-dependent event))
-    (cell-notify-success elt event))
-  (p:fullfill! (request handler) (data handler)))
+  (handler-case
+      (progn
+        (p:fullfill! (request handler) (funcall (payload handler) event))
+        (iterate
+          (for elt in (bt2:with-lock-held ((lock event))
+                        (success-dependent event)))
+          (cell-notify-success elt event)))
+    (error (e)
+      (p:cancel! (request handler) e)
+      (iterate
+        (for elt in (bt2:with-lock-held ((lock event))
+                      (failure-dependent event)))
+        (cell-notify-failure elt event)))))
 
 (defmethod request-handler ((loop event-loop) id)
   (gethash id (request-handlers loop)))
@@ -62,11 +71,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod (setf request-handler) (new-value (loop event-loop) id)
   (setf (gethash id (request-handlers loop)) new-value))
 
-(defmethod setup-response-handler ((event request-event) (loop event-loop) data)
+(defmethod setup-response-handler ((event request-event) (loop event-loop) payload)
   (setf (response-handler loop (id event))
         (make-instance 'response-handler
                        :request event
-                       :data data)))
+                       :payload payload)))
 
 (defmethod react :around ((event cell-event) (loop event-loop))
   (bind (((:accessors lock promise canceled failure-dependent) event))
@@ -150,7 +159,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod cancel! ((event cell-event) reason)
   (bt2:with-lock-held ((lock event))
     (setf (canceled event) reason))
-  (p:fullfill! (promise event) reason)
+  (p:cancel! (promise event) reason)
   (iterate
     (for elt in (bt2:with-lock-held ((lock event))
                   (failure-dependent event)))

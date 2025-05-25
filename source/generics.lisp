@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric running-p (event-loop))
 (defgeneric context (event-loop))
 (defgeneric (setf context) (new-value event-loop))
-(defgeneric setup-response-handler (event event-loop data))
+(defgeneric setup-response-handler (event event-loop payload))
 (defgeneric remove-handler (event event-loop))
 (defgeneric cell-notify-failure (cell failed))
 (defgeneric cell-notify-success (cell succeded))
