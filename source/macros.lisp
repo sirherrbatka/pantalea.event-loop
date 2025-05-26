@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                           (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym))
                                            combined)))
                      (assert (endp (intersection success failure)))
+                     (assert (equal (remove-duplicates combined) combined))
                      `(setf ,variable-name
                             (make-instance ',class
                                            :delay ,delay

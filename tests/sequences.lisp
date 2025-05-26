@@ -39,3 +39,11 @@
                               5)
                              (b (:success (a) :delay 5 :failure (a))
                               (+ 2 a))))))))
+
+(rove:deftest duplicated-dependency
+  (rove:ok (rove:signals (macroexpand
+                          '(pantalea.event-loop:events-sequence
+                            ((a (:delay 3)
+                              5)
+                             (b (:success (a a) :delay 5)
+                              (+ 2 a))))))))
