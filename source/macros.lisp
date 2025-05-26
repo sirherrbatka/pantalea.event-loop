@@ -38,13 +38,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    (class (if timeout-bound-p 'request-event 'cell-event))
                                    (event-loop nil))
                              args)
-                            (combined (intersection (append success failure)
-                                                    variable-names))
-                            (foreign (set-difference (append success failure) variable-names))
+                            (everything (append success failure))
+                            (combined (intersection everything variable-names))
+                            (foreign (set-difference everything variable-names))
                             (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym))
                                              combined)))
                        (assert (endp (intersection success failure)))
-                       (assert (equal (remove-duplicates combined) combined))
+                       (assert (equal (remove-duplicates everything) everything))
                        `(setf ,variable-name
                               (make-instance ',class
                                              :delay ,delay
