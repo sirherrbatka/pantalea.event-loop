@@ -24,14 +24,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(define-condition event-loop-error (error)
+(errors:def event-loop-error ()
   ())
 
-(define-condition event-loop-not-started-error (event-loop-error)
+(errors:def event-loop-not-started-error (event-loop-error)
   ())
 
-(define-condition event-loop-already-running (event-loop-error)
+(errors:def event-loop-already-running (event-loop-error)
   ())
 
-(define-condition no-handler-error (event-loop-error)
+(errors:def no-handler-error (event-loop-error)
   ())

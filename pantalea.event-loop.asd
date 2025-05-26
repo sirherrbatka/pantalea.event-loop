@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                #:metabang-bind
                #:alexandria
                #:pantalea.queue
+               #:pantalea.errors
                #:pantalea.timing-wheel
                #:log4cl
                #:pantalea.promise)

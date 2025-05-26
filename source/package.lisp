@@ -39,6 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:eswitch
                 #:switch)
   (:local-nicknames
+   (#:errors #:pantalea.errors))
+  (:local-nicknames
    (#:tw #:pantalea.timing-wheel))
   (:local-nicknames
    (#:p #:pantalea.promise))
