@@ -103,7 +103,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :timeout nil))
 
 (defclass response-event (event)
-  ())
+  ((%data :initarg :data
+          :reader data)))
 
 (defclass termination-event ()
   ())
@@ -120,6 +121,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :reader request)
    (%payload
     :initarg :payload
-    :reader payload))
-  (:default-initargs
-   :context (list)))
+    :reader payload)))

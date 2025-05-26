@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                (loop event-loop))
   (handler-case
       (progn
-        (p:fullfill! (request handler) (funcall (payload handler) event))
+        (p:fullfill! (promise (request handler)) (funcall (payload handler) event))
         (iterate
           (for elt in (bt2:with-lock-held ((lock event))
                         (success-dependent event)))
@@ -65,10 +65,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                       (failure-dependent event)))
         (cell-notify-failure elt event)))))
 
-(defmethod request-handler ((loop event-loop) id)
+(defmethod response-handler ((loop event-loop) id)
   (gethash id (request-handlers loop)))
 
-(defmethod (setf request-handler) (new-value (loop event-loop) id)
+(defmethod (setf response-handler) (new-value (loop event-loop) id)
   (setf (gethash id (request-handlers loop)) new-value))
 
 (defmethod setup-response-handler ((event request-event) (loop event-loop) payload)
@@ -92,8 +92,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod react ((event request-event) (loop event-loop))
   (handler-case
-      (bind (((:accessors timeout completed lock callback) event))
-        (setup-response-handler event loop (funcall callback))
+      (bind ((*event* event)
+             ((:accessors timeout completed lock callback) event)
+             (response-handler-payload (funcall callback)))
+        (setup-response-handler event loop response-handler-payload)
         (on-event-loop (:delay (timeout event))
           (unless (bt2:with-lock-held (lock) (completed event))
                   (log:warn "Timeout while waiting on request ~a" event)
@@ -108,7 +110,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (error e))))
 
 (defmethod react ((event cell-event) (loop event-loop))
-  (bind (((:accessors lock callback promise) event))
+  (bind ((*event* event)
+         ((:accessors lock callback promise) event))
     (handler-case
         (progn
           (p:fullfill! promise (funcall callback))

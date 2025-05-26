@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:cell-event-result
    #:cell-notify-failure
    #:cell-notify-success
+   #:*event*
    #:context
    #:event
    #:event-loop
