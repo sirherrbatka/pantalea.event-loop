@@ -82,7 +82,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (when canceled
       (p:cancel! promise canceled)
       (iterate
-        (for elt in failure-dependent)
+        (for elt in (bt2:with-lock-held ((lock event))
+                      (failure-dependent event)))
         (cell-notify-failure elt event))
       (return-from react nil))
     (call-next-method)))
@@ -162,11 +163,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod cancel! ((event cell-event) reason)
   (bt2:with-lock-held ((lock event))
     (setf (canceled event) reason))
-  (p:cancel! (promise event) reason)
-  (iterate
-    (for elt in (bt2:with-lock-held ((lock event))
-                  (failure-dependent event)))
-    (cell-notify-failure elt event)))
+  (p:cancel! (promise event) reason))
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= delay 0))
@@ -226,9 +223,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   event-loop)
 
 (defmethod attach-on-success! ((cell cell-event) (dep cell-event))
-  (push dep (success-dependent cell))
-  (push cell (dependency dep)))
+  (bt2:with-lock-held ((lock cell))
+    (bt2:with-lock-held ((lock dep))
+      (push dep (success-dependent cell))
+      (push cell (dependency dep)))))
 
 (defmethod attach-on-failure! ((cell cell-event) (dep cell-event))
-  (push dep (failure-dependent cell))
-  (push cell (dependency dep)))
+  (bt2:with-lock-held ((lock cell))
+    (bt2:with-lock-held ((lock dep))
+      (push dep (failure-dependent cell))
+      (push cell (dependency dep)))))
