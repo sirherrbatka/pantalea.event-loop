@@ -47,3 +47,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric cancel! (cell-event reason))
 (defgeneric response-handler (loop id))
 (defgeneric (setf response-handler) (new-value loop id))
+(defgeneric hook (cell hooks))

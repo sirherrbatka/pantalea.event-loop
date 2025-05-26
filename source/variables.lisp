@@ -24,5 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(defvar *event-loop*)
+(defvar *event-loop* nil)
 (defvar *event*)
+(defvar *events-context* nil)

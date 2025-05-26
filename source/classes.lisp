@@ -75,6 +75,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 :accessor dependency)
    (%delay :initarg :delay
            :reader delay)
+   (%failure-dependencies
+    :initarg :failure-dependencies
+    :accessor failure-dependencies)
+   (%success-dependencies
+    :initarg :success-dependencies
+    :accessor success-dependencies)
+   (%dependency-cells
+    :initarg :dependency-cells
+    :accessor dependency-cells)
    (%failure-dependent :initarg :failure-dependent
                        :accessor failure-dependent)
    (%success-dependent :initarg :success-dependent
@@ -83,6 +92,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           :reader lock)
    (%canceled :initarg :canceled
               :accessor canceled)
+   (%name
+    :initarg :name
+    :accessor name)
    (%event-loop :initarg :event-loop
                 :reader event-loop))
   (:default-initargs
@@ -90,8 +102,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :lock (bt2:make-lock)
    :event-loop nil
    :delay 0
+   :dependency-cells nil
    :dependency (list)
    :promise (p:promise nil)
+   :failure-dependencies (list)
+   :success-dependencies (list)
    :success-dependent (list)
    :failure-dependent (list)))
 
