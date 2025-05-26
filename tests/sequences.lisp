@@ -31,3 +31,11 @@
            (pantalea.event-loop:add! event-loop a)
            (rove:ok (= 7 (pantalea.event-loop:cell-event-result a))))
       (ignore-errors (stop! event-loop)))))
+
+(rove:deftest conflicting-dependency
+  (rove:ok (rove:signals (macroexpand
+                          '(pantalea.event-loop:events-sequence
+                            ((a (:delay 3)
+                              5)
+                             (b (:success (a) :delay 5 :failure (a))
+                              (+ 2 a))))))))

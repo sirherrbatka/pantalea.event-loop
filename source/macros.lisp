@@ -35,18 +35,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                           (combined (append success failure))
                           (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym))
                                            combined)))
+                     (assert (endp (intersection success failure)))
                      `(setf ,variable-name
                             (make-instance ',class
                                            :delay ,delay
                                            :callback ,(if combined
-                                                         `(lambda ()
-                                                            (let ,(mapcar #'list gensyms combined)
-                                                              (symbol-macrolet ,(mapcar (lambda (gensym symbol)
-                                                                                          `(,symbol (cell-event-result ,gensym)))
-                                                                                 gensyms
-                                                                                 combined)
-                                                                ,@body)))
-                                                         `(lambda () ,@body))
+                                                          `(lambda ()
+                                                             (let ,(mapcar #'list gensyms combined)
+                                                               (symbol-macrolet ,(mapcar (lambda (gensym symbol)
+                                                                                           `(,symbol (cell-event-result ,gensym)))
+                                                                                  gensyms
+                                                                                  combined)
+                                                                 ,@body)))
+                                                          `(lambda () ,@body))
                                            ,@(when timeout-bound-p (list :timeout timeout))))))
                  spec)
        ,@(mapcar
