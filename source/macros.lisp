@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (let ((variable-names (mapcar #'first spec)))
     (alexandria:with-gensyms (!hook !cell)
       `(let* ((*events-context* (or *events-context* (list nil)))
-              (,@variable-names))
+              ,@variable-names)
          (declare (ignorable ,@variable-names))
          ,@(mapcar (lambda (spec)
                      (bind (((variable-name args . body) spec)

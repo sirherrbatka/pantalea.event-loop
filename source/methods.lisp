@@ -55,11 +55,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (progn
         (p:fullfill! (promise (request handler)) (funcall (payload handler) event))
         (iterate
-          (for elt in (bt2:with-lock-held ((lock event))
-                        (success-dependent event)))
+          (for elt in (success-dependent event))
           (cell-notify-success elt event)))
     (error (e)
-      (handler-case (p:cancel! (request handler) :condition e :timeout 1)
+      (handler-case (p:cancel! (request handler)
+                               :condition e
+                               :timeout 0.1)
         (error (e)
           (log:warn "While attempting canceling: ~a" e))
         (:no-error ()
@@ -107,7 +108,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (cancel! event (errors:make-chained request-timeout
                                                 ("Timeout ~a crossed." timeout))))))
     (error (e)
-      (handler-case (p:cancel! (promise event) :condition e :timeout 1)
+      (handler-case (p:cancel! (promise event)
+                               :condition e
+                               :timeout 0.1)
         (error (e)
           (log:warn "While attempting canceling: ~a" e))
         (:no-error ()
@@ -126,7 +129,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (for elt in (success-dependent event))
             (cell-notify-success elt event)))
       (error (e)
-        (handler-case (p:cancel! (promise event) :condition e :timeout 1)
+        (handler-case (p:cancel! (promise event)
+                                 :condition e
+                                 :timeout 0.1)
           (error (e)
             (log:warn "While attempting canceling: ~a" e))
           (:no-error ()
@@ -164,7 +169,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod cancel! ((event cell-event) reason)
   (errors:with-link (errors:!!! unable-to-cancel ("Can't cancel cell.")) (unable-to-cancel)
-    (p:cancel! (promise event) :condition reason :timeout 1))
+    (p:cancel! (promise event)
+               :condition reason
+               :timeout 0.1))
   event)
 
 (defmethod cancel! ((event request-event) reason)
@@ -209,7 +216,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (p:cancel! (promise event)
                           :condition (errors:make-chained not-started-before-deadline
                                                           ("Task was not started before the START-deadline ~a" start-deadline))
-                          :timeout 1))))))
+                          :timeout 0.1))))))
   event)
 
 (defmethod obtain-handler-without-id ((event t) (loop event-loop))
@@ -217,7 +224,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod obtain-handler ((event event) (loop event-loop))
   (or (response-handler loop (id event))
-      (handler-without-id event loop)))
+      (obtain-handler-without-id event loop)))
 
 (defmethod obtain-handler ((event t) (loop event-loop))
   nil)
@@ -258,31 +265,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   event-loop)
 
 (defmethod attach-on-success! ((cell cell-event) (dep cell-event))
-  (bt2:with-lock-held ((lock cell))
-    (bt2:with-lock-held ((lock dep))
-      (push dep (success-dependent cell))
-      (push cell (dependency dep)))))
+  (push dep (success-dependent cell))
+  (push cell (dependency dep)))
 
 (defmethod attach-on-failure! ((cell cell-event) (dep cell-event))
-  (bt2:with-lock-held ((lock cell))
-    (bt2:with-lock-held ((lock dep))
-      (push dep (failure-dependent cell))
-      (push cell (dependency dep)))))
+  (push dep (failure-dependent cell))
+  (push cell (dependency dep)))
 
 (defmethod success-dependent :around ((event cell-event))
-  (bt:with-lock-held ((lock event)) (call-next-method)))
+  (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod (setf success-dependent) :around (new-value (event cell-event))
-  (bt:with-lock-held ((lock event)) (call-next-method)))
+  (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod failure-dependent :around ((event cell-event))
-  (bt:with-lock-held ((lock event)) (call-next-method)))
+  (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod (setf failure-dependent) :around (new-value (event cell-event))
-  (bt:with-lock-held ((lock event)) (call-next-method)))
+  (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod dependency :around ((event cell-event))
-  (bt:with-lock-held ((lock event)) (call-next-method)))
+  (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod (setf dependency) :around (new-value (event cell-event))
-  (bt:with-lock-held ((lock event)) (call-next-method)))
+  (bt2:with-lock-held ((lock event)) (call-next-method)))
