@@ -62,7 +62,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                :condition e
                                :timeout 0.1)
         (error (e)
-          (log:warn "While attempting canceling: ~a" e))
+          (log:warn "Error while attempting to cancel: ~a" e))
         (:no-error ()
           (iterate
             (for elt in (bt2:with-lock-held ((lock event))
