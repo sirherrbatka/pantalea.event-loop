@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                             ((&key success failure
                                    (timeout nil timeout-bound-p)
                                    (delay 0)
+                                   (start-deadline nil)
                                    (class (if timeout-bound-p 'request-event 'cell-event))
                                    (event-loop nil))
                              args)
@@ -52,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                              :failure-dependencies '(,@failure)
                                              :event-loop ,event-loop
                                              :name ',variable-name
+                                             :start-deadline ,start-deadline
                                              :callback (lambda (&aux (*event* *event*))
                                                            (symbol-macrolet ,(mapcar (lambda (symbol)
                                                                                        `(,symbol (cell-event-result (find ',symbol

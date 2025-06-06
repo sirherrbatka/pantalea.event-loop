@@ -59,11 +59,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         (success-dependent event)))
           (cell-notify-success elt event)))
     (error (e)
-      (p:cancel! (request handler) e)
-      (iterate
-        (for elt in (bt2:with-lock-held ((lock event))
-                      (failure-dependent event)))
-        (cell-notify-failure elt event)))))
+      (handler-case (p:cancel! (request handler) :condition e :timeout 1)
+        (error (e)
+          (log:warn "While attempting canceling: ~a" e))
+        (:no-error ()
+          (iterate
+            (for elt in (bt2:with-lock-held ((lock event))
+                          (failure-dependent event)))
+            (cell-notify-failure elt event)))))))
 
 (defmethod response-handler ((loop event-loop) id)
   (gethash id (request-handlers loop)))
@@ -72,42 +75,45 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (setf (gethash id (request-handlers loop)) new-value))
 
 (defmethod setup-response-handler ((event request-event) (loop event-loop) payload)
-  (setf (response-handler loop (id event))
-        (make-instance 'response-handler
-                       :request event
-                       :payload payload)))
+  (let ((handler (make-instance 'response-handler
+                           :request event
+                           :payload payload)))
+    (bt2:with-lock-held ((main-lock loop))
+      (setf (response-handler loop (id event)) handler))))
 
 (defmethod react :around ((event cell-event) (loop event-loop))
-  (bind (((:accessors lock promise canceled failure-dependent) event))
-    (when canceled
-      (p:cancel! promise canceled)
+  (bind (((:accessors lock promise failure-dependent) event))
+    (when (p:fullfilledp promise)
+      ;; since this could not be run before, it had to be canceled, we will simply notify failure
       (iterate
-        (for elt in (bt2:with-lock-held ((lock event))
-                      (failure-dependent event)))
+        (for elt in (failure-dependent event))
         (cell-notify-failure elt event))
       (return-from react nil))
     (call-next-method)))
 
 (defmethod remove-response-handler ((event event) (loop event-loop))
-  (remhash (id event) (request-handlers loop)))
+  (bt2:with-lock-held ((main-lock loop))
+    (remhash (id event) (request-handlers loop))))
 
 (defmethod react ((event request-event) (loop event-loop))
   (handler-case
       (bind ((*event* event)
-             ((:accessors timeout completed lock callback) event)
+             ((:accessors timeout lock callback promise) event)
              (response-handler-payload (funcall callback)))
         (setup-response-handler event loop response-handler-payload)
-        (on-event-loop (:delay (timeout event))
-          (unless (bt2:with-lock-held (lock) (completed event))
-                  (log:warn "Timeout while waiting on request ~a" event)
-                  (remove-response-handler event loop)
-                  (cancel! event (make-condition 'timeout-error)))))
+        (on-event-loop (:delay timeout)
+          (unless (p:fullfilledp promise)
+            (log:warn "Timeout while waiting on request ~a" event)
+            (cancel! event (errors:make-chained request-timeout
+                                                ("Timeout ~a crossed." timeout))))))
     (error (e)
-      (iterate
-        (for elt in (bt2:with-lock-held ((lock event))
-                      (failure-dependent event)))
-        (cell-notify-failure elt event))
-      (p:cancel! (promise event) e)
+      (handler-case (p:cancel! (promise event) :condition e :timeout 1)
+        (error (e)
+          (log:warn "While attempting canceling: ~a" e))
+        (:no-error ()
+          (iterate
+            (for elt in (failure-dependent event))
+            (cell-notify-failure elt event))))
       (error e))))
 
 (defmethod react ((event cell-event) (loop event-loop))
@@ -117,40 +123,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         (progn
           (p:fullfill! promise (funcall callback))
           (iterate
-            (for elt in (bt2:with-lock-held (lock)
-                          (success-dependent event)))
+            (for elt in (success-dependent event))
             (cell-notify-success elt event)))
       (error (e)
-        (p:cancel! (promise event) e)
-        (iterate
-          (for elt in (bt2:with-lock-held (lock)
-                        (failure-dependent event)))
-          (cell-notify-failure elt event))
-        (p:fullfill! (promise event) e)
+        (handler-case (p:cancel! (promise event) :condition e :timeout 1)
+          (error (e)
+            (log:warn "While attempting canceling: ~a" e))
+          (:no-error ()
+            (iterate
+              (for elt in (failure-dependent event))
+              (cell-notify-failure elt event))))
         (error e)))))
 
 (defmethod add-cell-event! ((event cell-event))
-  (add! (or (event-loop event) *event-loop*)
-        event
-        (delay event)))
+  (add! (or (event-loop event) *event-loop*) event))
 
 (defmethod cell-notify-failure ((cell cell-event) failed)
   (handler-case
       (bind (((:accessors dependency lock) cell))
-        (bt2:with-lock-held (lock)
-          (setf dependency (delete failed dependency))
-          (when (endp dependency)
-            (add-cell-event! cell))))
+        (setf dependency (delete failed dependency))
+        (when (endp dependency)
+          (add-cell-event! cell)))
     (error (e)
       (log:warn "~a" e))))
 
 (defmethod cell-notify-success ((cell cell-event) failed)
   (handler-case
       (bind (((:accessors dependency lock) cell))
-        (bt2:with-lock-held (lock)
-          (setf dependency (delete failed dependency))
-          (when (endp dependency)
-            (add-cell-event! cell))))
+        (setf dependency (delete failed dependency))
+        (when (endp dependency)
+          (add-cell-event! cell)))
     (error (e)
       (log:warn "~a" e))))
 
@@ -161,20 +163,53 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (p:force (promise event)))
 
 (defmethod cancel! ((event cell-event) reason)
-  (bt2:with-lock-held ((lock event))
-    (setf (canceled event) reason))
-  (p:cancel! (promise event) reason))
+  (errors:with-link (errors:!!! unable-to-cancel ("Can't cancel cell.")) (unable-to-cancel)
+    (p:cancel! (promise event) :condition reason :timeout 1))
+  event)
+
+(defmethod cancel! ((event request-event) reason)
+  (handler-case (call-next-method)
+    (unable-to-cancel (e)
+      (log:warn "Unable to cancel request, removing handlers regardless. ~a" e)
+      (ignore-errors (remove-response-handler event reason)))
+    (:no-error ()
+      (ignore-errors (remove-response-handler event reason)))))
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= delay 0))
   (bt2:with-lock-held ((main-lock event-loop))
     (unless (thread event-loop)
-      (errors:!!! event-loop-not-started-error ("EVENT-LOOP is not running!")))
+      (errors:!!! event-loop-not-started ("EVENT-LOOP is not running!")))
     (if (zerop delay)
         (blocking-queue-push! (queue event-loop) event)
         (tw:add! (timing-wheel event-loop)
                  delay
-                 (lambda () (add! event-loop event 0)))))
+                 (lambda ()
+                   (ignore-errors (add! event-loop event 0))))))
+  event)
+
+(defmethod add! ((event-loop event-loop) (event cell-event) &optional (delay (delay event)))
+  (assert (>= delay 0))
+  (bt2:with-lock-held ((main-lock event-loop))
+    (unless (thread event-loop)
+      (errors:!!! event-loop-not-started ("EVENT-LOOP is not running!")))
+    (if (zerop delay)
+        (progn
+          (blocking-queue-push! (queue event-loop) event))
+        (progn
+          (tw:add! (timing-wheel event-loop)
+                   delay
+                   (lambda ()
+                     (add! event-loop event 0)))))
+    (when-let ((start-deadline (start-deadline event)))
+      (add! event-loop
+            start-deadline
+            (lambda ()
+              (ignore-errors
+               (p:cancel! (promise event)
+                          :condition (errors:make-chained not-started-before-deadline
+                                                          ("Task was not started before the START-deadline ~a" start-deadline))
+                          :timeout 1))))))
   event)
 
 (defmethod obtain-handler-without-id ((event t) (loop event-loop))
@@ -213,7 +248,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod stop! ((event-loop event-loop))
   (bt2:with-lock-held ((main-lock event-loop))
     (unless (thread event-loop)
-      (errors:!!! event-loop-not-started-error ("EVENT-LOOP is not running!")))
+      (errors:!!! event-loop-not-started ("EVENT-LOOP is not running!")))
     (tw:stop! (timing-wheel event-loop))
     (blocking-queue-push! (queue event-loop) (make-instance 'termination-event))
     (bt2:join-thread (thread event-loop))
@@ -233,3 +268,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (bt2:with-lock-held ((lock dep))
       (push dep (failure-dependent cell))
       (push cell (dependency dep)))))
+
+(defmethod success-dependent :around ((event cell-event))
+  (bt:with-lock-held ((lock event)) (call-next-method)))
+
+(defmethod (setf success-dependent) :around (new-value (event cell-event))
+  (bt:with-lock-held ((lock event)) (call-next-method)))
+
+(defmethod failure-dependent :around ((event cell-event))
+  (bt:with-lock-held ((lock event)) (call-next-method)))
+
+(defmethod (setf failure-dependent) :around (new-value (event cell-event))
+  (bt:with-lock-held ((lock event)) (call-next-method)))
+
+(defmethod dependency :around ((event cell-event))
+  (bt:with-lock-held ((lock event)) (call-next-method)))
+
+(defmethod (setf dependency) :around (new-value (event cell-event))
+  (bt:with-lock-held ((lock event)) (call-next-method)))

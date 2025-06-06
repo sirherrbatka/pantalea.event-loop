@@ -27,11 +27,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (errors:def event-loop-error ()
   ())
 
-(errors:def event-loop-not-started-error (event-loop-error)
+(errors:def request-timeout (event-loop-error)
+  ())
+
+(errors:def task-canceled (event-loop-error)
+  ())
+
+(errors:def event-loop-not-started (event-loop-error)
   ())
 
 (errors:def event-loop-already-running (event-loop-error)
   ())
 
-(errors:def no-handler-error (event-loop-error)
+(errors:def no-handler (event-loop-error)
+  ())
+
+(errors:def not-started-before-deadline (event-loop-error)
+  ())
+
+(errors:def unable-to-cancel (event-loop-error)
   ())

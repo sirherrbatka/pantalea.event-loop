@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                #:iterate
                #:metabang-bind
                #:alexandria
+               #:serapeum
                #:pantalea.queue
                #:pantalea.errors
                #:pantalea.timing-wheel

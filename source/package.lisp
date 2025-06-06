@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:make-blocking-queue
                 #:blocking-queue-push!
                 #:blocking-queue-pop!)
+  (:import-from #:serapeum
+                #:~>)
   (:import-from #:alexandria
                 #:most-positive-fixnum
                 #:if-let
@@ -37,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:rcurry
                 #:hash-table-keys
                 #:eswitch
+                #:when-let
                 #:switch)
   (:local-nicknames
    (#:errors #:pantalea.errors))

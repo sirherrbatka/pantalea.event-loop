@@ -67,41 +67,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :id (random most-positive-fixnum)))
 
 (defclass cell-event (event)
-  ((%promise :initarg :promise
-             :accessor promise)
-   (%callback :initarg :callback
-              :reader callback)
-   (%dependency :initarg :dependency
-                :accessor dependency)
-   (%delay :initarg :delay
-           :reader delay)
+  ((%promise
+    :initarg :promise
+    :accessor promise)
+   (%callback
+    :initarg :callback
+    :reader callback)
+   (%dependency
+    :initarg :dependency
+    :accessor dependency)
+   (%delay
+    :initarg :delay
+    :reader delay)
    (%failure-dependencies
     :initarg :failure-dependencies
     :accessor failure-dependencies)
+   (%start-deadline
+    :initarg :start-deadline
+    :reader start-deadline)
    (%success-dependencies
     :initarg :success-dependencies
     :accessor success-dependencies)
    (%dependency-cells
     :initarg :dependency-cells
     :accessor dependency-cells)
-   (%failure-dependent :initarg :failure-dependent
-                       :accessor failure-dependent)
-   (%success-dependent :initarg :success-dependent
-                       :accessor success-dependent)
-   (%lock :initarg :lock
-          :reader lock)
-   (%canceled :initarg :canceled
-              :accessor canceled)
+   (%failure-dependent
+    :initarg :failure-dependent
+    :accessor failure-dependent)
+   (%success-dependent
+    :initarg :success-dependent
+    :accessor success-dependent)
+   (%lock
+    :initarg :lock
+    :reader lock)
    (%name
     :initarg :name
     :accessor name)
-   (%event-loop :initarg :event-loop
-                :reader event-loop))
+   (%event-loop
+    :initarg :event-loop
+    :reader event-loop))
   (:default-initargs
-   :canceled nil
    :lock (bt2:make-lock)
    :event-loop nil
    :delay 0
+   :start-deadline nil
    :dependency-cells nil
    :dependency (list)
    :promise (p:promise nil)
