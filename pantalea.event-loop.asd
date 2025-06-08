@@ -41,5 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                (:file "generics")
                (:file "classes")
                (:file "variables")
+               (:file "utils")
                (:file "methods")
                ))

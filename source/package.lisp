@@ -30,15 +30,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:blocking-queue-push!
                 #:blocking-queue-pop!)
   (:import-from #:serapeum
+                #:nest
                 #:~>)
   (:import-from #:alexandria
                 #:most-positive-fixnum
                 #:if-let
                 #:flatten
+                #:once-only
                 #:hash-table-values
                 #:rcurry
                 #:hash-table-keys
                 #:eswitch
+                #:with-gensyms
                 #:when-let
                 #:switch)
   (:local-nicknames
@@ -51,9 +54,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:*event*
    #:*event-loop*
    #:add!
-   #:attach-on-failure!
    #:attach-on-success!
+   #:attach-on-failure!
    #:cell-event
+   #:add-cell-event!
    #:cell-event-result
    #:cell-notify-failure
    #:cell-notify-success

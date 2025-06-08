@@ -24,10 +24,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (cl:in-package #:pantalea.event-loop)
 
 
-(defmacro events-sequence (spec &body body)
+(defmacro with-locked-context (additional-cells &body body)
+  (with-gensyms (!events-context)
+    `(let ((,!events-context *events-context*))
+       (nest ,@(mapcar (lambda (cell) `(bt2:with-lock-held ((lock ,cell)))) additional-cells)
+             (progn (map nil (lambda (x) (when x (bt2:acquire-lock (lock x)))) ,!events-context)
+                    (unwind-protect ,@body
+                      (map nil (lambda (x) (when x (bt2:release-lock (lock x)))) ,!events-context)))))))
+
+(defmacro with-attach (new-cells &body body)
+  `(with-locked-context (,@new-cells)
+     (prog1 (progn ,@body)
+       ,@(iterate
+           (for cell in new-cells)
+           (collecting
+             `(clear-dependency ,cell))))))
+
+(defmacro events-sequence (event-loop spec &body body)
   (let ((variable-names (mapcar #'first spec)))
     (alexandria:with-gensyms (!hook !cell)
       `(let* ((*events-context* (or *events-context* (list nil)))
+              (*event-loop* ,event-loop)
               ,@variable-names)
          (declare (ignorable ,@variable-names))
          ,@(mapcar (lambda (spec)
@@ -37,7 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                    (delay 0)
                                    (start-deadline nil)
                                    (class (if timeout-bound-p 'request-event 'cell-event))
-                                   (event-loop nil))
+                                   (event-loop nil event-loop-bound-p))
                              args)
                             (everything (append success failure))
                             (combined (intersection everything variable-names))
@@ -51,59 +68,60 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                              :delay ,delay
                                              :success-dependencies '(,@success)
                                              :failure-dependencies '(,@failure)
-                                             :event-loop ,event-loop
+                                             :event-loop ,(if event-loop-bound-p event-loop *event-loop*)
                                              :name ',variable-name
                                              :start-deadline ,start-deadline
                                              :callback (lambda (&aux (*event* *event*))
-                                                           (symbol-macrolet ,(mapcar (lambda (symbol)
-                                                                                       `(,symbol (cell-event-result (find ',symbol
-                                                                                                                          (dependency-cells *event*)
-                                                                                                                          :key #'name))))
-                                                                              foreign)
-                                                             (let ,(mapcar #'list gensyms combined)
-                                                               (symbol-macrolet ,(mapcar (lambda (gensym symbol)
-                                                                                           `(,symbol (cell-event-result ,gensym)))
-                                                                                  gensyms
-                                                                                  combined)
-                                                                 ,@body))))
+                                                         (symbol-macrolet ,(mapcar (lambda (symbol)
+                                                                                     `(,symbol (cell-event-result (find ',symbol
+                                                                                                                        (dependency-cells *event*)
+                                                                                                                        :key #'name))))
+                                                                            foreign)
+                                                           (let ,(mapcar #'list gensyms combined)
+                                                             (symbol-macrolet ,(mapcar (lambda (gensym symbol)
+                                                                                         `(,symbol (cell-event-result ,gensym)))
+                                                                                gensyms
+                                                                                combined)
+                                                               ,@body))))
                                              ,@(when timeout-bound-p (list :timeout timeout))))))
                    spec)
-         (iterate
-           (for ,!cell in *events-context*)
-           (until (null ,!cell))
+         (with-attach ,variable-names
            (iterate
-             (for ,!hook in (success-dependencies ,!cell))
-             (cond ,@(mapcar (lambda (symbol)
-                               `((eq ',symbol ,!hook)
-                                 (attach-on-success! ,symbol ,!cell)
-                                 (push ,symbol (dependency-cells ,!cell))))
-                             variable-names)))
-           (iterate
-             (for ,!hook in (failure-dependencies ,!cell))
-             (cond ,@(mapcar (lambda (symbol)
-                               `((eq ',symbol ,!hook)
-                                 (attach-on-failure! ,symbol ,!cell)
-                                 (push ,symbol (dependency-cells ,!cell))))
-                             variable-names))))
-         ,@(mapcar
-            (lambda (symbol)
-              `(push ,symbol *events-context*))
-            variable-names)
-         ,@(mapcar
-            (lambda (spec)
-              (bind (((name args . body) spec)
-                     ((&key success  failure &allow-other-keys) args))
-                (declare (ignore body))
-                `(progn
-                   ,@(mapcar (lambda (d)
-                               (when (member d variable-names)
-                                 `(attach-on-success! ,d ,name)))
-                             success)
-                   ,@(mapcar (lambda (d)
-                               (when (member d variable-names)
-                                 `(attach-on-failure! ,d ,name)))
-                             failure))))
-            spec)
+             (for ,!cell in *events-context*)
+             (until (null ,!cell))
+             (iterate
+               (for ,!hook in (success-dependencies ,!cell))
+               (cond ,@(mapcar (lambda (symbol)
+                                 `((eq ',symbol ,!hook)
+                                   (attach-on-success! ,symbol ,!cell)
+                                   (push ,symbol (dependency-cells ,!cell))))
+                               variable-names)))
+             (iterate
+               (for ,!hook in (failure-dependencies ,!cell))
+               (cond ,@(mapcar (lambda (symbol)
+                                 `((eq ',symbol ,!hook)
+                                   (attach-on-failure! ,symbol ,!cell)
+                                   (push ,symbol (dependency-cells ,!cell))))
+                               variable-names))))
+           ,@(mapcar
+              (lambda (symbol)
+                `(push ,symbol *events-context*))
+              variable-names)
+           ,@(mapcar
+              (lambda (spec)
+                (bind (((name args . body) spec)
+                       ((&key success  failure &allow-other-keys) args))
+                  (declare (ignore body))
+                  `(progn
+                     ,@(mapcar (lambda (d)
+                                 (when (member d variable-names)
+                                   `(attach-on-success! ,d ,name)))
+                               success)
+                     ,@(mapcar (lambda (d)
+                                 (when (member d variable-names)
+                                   `(attach-on-failure! ,d ,name)))
+                               failure))))
+              spec))
          ,@body))))
 
 (defmacro on-event-loop ((&key (delay 0) (event-loop '*event-loop*)) &body body)

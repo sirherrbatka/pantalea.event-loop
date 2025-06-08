@@ -6,12 +6,14 @@
     (rove:ok (running-p event-loop))
     (unwind-protect
          (events-sequence
+             event-loop
              ((b (:success (a) :delay 0)
                  (+ a 2)))
            (events-sequence
+               event-loop
                ((a (:delay 0)
                    5))
-             (pantalea.event-loop:add! event-loop a)
+             (add-cell-event! a)
              (rove:ok (= 5 (pantalea.event-loop:cell-event-result a)))
              (rove:ok (= 7 (pantalea.event-loop:cell-event-result b)))))
       (pantalea.event-loop:stop! event-loop))))
@@ -22,6 +24,7 @@
     (rove:ok (running-p event-loop))
     (unwind-protect
          (pantalea.event-loop:events-sequence
+             event-loop
              ((a (:delay 3)
                  5)
               (b (:success (a) :delay 5)
@@ -37,11 +40,12 @@
     (rove:ok (running-p event-loop))
     (unwind-protect
          (pantalea.event-loop:events-sequence
+             event-loop
              ((a (:delay 3)
                  5)
               (b (:success (a) :delay 5)
                  (+ 2 a)))
-           (pantalea.event-loop:add! event-loop a)
+           (add-cell-event! a)
            (cancel! b (errors:make-chained event-loop-error ("canceled!")))
            (rove:ok (= 5 (pantalea.event-loop:cell-event-result a)))
            (rove:signals (pantalea.event-loop:cell-event-result b)))
@@ -53,12 +57,13 @@
     (rove:ok (running-p event-loop))
     (unwind-protect
          (pantalea.event-loop:events-sequence
+             event-loop
              ((a (:delay 0)
                  5)
               (b (:success (a) :delay 0)
                  (+ 2 a)))
-           (pantalea.event-loop:add! event-loop a)
-           (sleep 2)
+           (add-cell-event! a)
+           (sleep 3)
            (rove:signals (cancel! b (errors:make-chained event-loop-error ("canceled!"))))
            (rove:ok (= 5 (pantalea.event-loop:cell-event-result a)))
            (rove:ok (= 7 (pantalea.event-loop:cell-event-result b))))
@@ -70,6 +75,7 @@
     (rove:ok (running-p event-loop))
     (unwind-protect
          (pantalea.event-loop:events-sequence
+             event-loop
              ((a (:timeout 10)
                  (add! event-loop (make-instance 'response-event
                                                  :id (id *event*)
@@ -83,6 +89,7 @@
 (rove:deftest conflicting-dependency
   (rove:ok (rove:signals (macroexpand
                           '(pantalea.event-loop:events-sequence
+                            event-loop
                             ((a (:delay 3)
                               5)
                              (b (:success (a) :delay 5 :failure (a))
@@ -91,6 +98,7 @@
 (rove:deftest duplicated-dependency
   (rove:ok (rove:signals (macroexpand
                           '(pantalea.event-loop:events-sequence
+                            event-loop
                             ((a (:delay 3)
                               5)
                              (b (:success (a a) :delay 5)

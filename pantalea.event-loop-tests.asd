@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   :depends-on (#:pantalea.event-loop #:rove)
   :serial T
   :pathname "tests"
-  :components ((:file "starting-stopping"))
+  :components ((:file "starting-stopping")
+               (:file "sequences"))
   :perform (asdf:test-op (op c)
              (uiop:symbol-call :rove :run :pantalea.event-loop-tests)))
