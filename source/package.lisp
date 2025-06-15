@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:remove-response-handler
    #:request-event
    #:response-handler
+   #:defhook
    #:response-handler
    #:running-p
    #:setup-response-handler
