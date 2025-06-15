@@ -127,3 +127,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmacro on-event-loop ((&key (delay 0) (event-loop '*event-loop*)) &body body)
   `(let ((*event-loop* ,event-loop))
      (add! *event-loop* (lambda () ,@body) ,delay)))
+
+(defmacro defhook (name)
+  `(defconstant ,name ',name))

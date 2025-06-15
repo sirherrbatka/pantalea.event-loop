@@ -58,6 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:attach-on-failure!
    #:cell-event
    #:add-cell-event!
+   #:defhook
    #:cell-event-result
    #:cell-notify-failure
    #:cell-notify-success
