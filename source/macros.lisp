@@ -129,4 +129,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      (add! *event-loop* (lambda () ,@body) ,delay)))
 
 (defmacro defhook (name)
-  `(defconstant ,name ',name))
+  (declare (ignore name))
+  nil)
