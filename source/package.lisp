@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:blocking-queue-pop!)
   (:import-from #:serapeum
                 #:nest
+                #:dict
+                #:lret
                 #:~>)
   (:import-from #:alexandria
                 #:most-positive-fixnum
@@ -58,14 +60,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:attach-on-failure!
    #:cell-event
    #:add-cell-event!
-   #:defhook
    #:cell-event-result
    #:cell-notify-failure
    #:cell-notify-success
    #:context
    #:event
    #:event-loop
-   #:events-sequence
+   #:with-new-events-sequence
+   #:with-existing-events-sequence
    #:obtain-handler
    #:obtain-handler-without-id
    #:on-event-loop

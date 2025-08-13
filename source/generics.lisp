@@ -48,3 +48,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defgeneric response-handler (loop id))
 (defgeneric (setf response-handler) (new-value loop id))
 (defgeneric hook (cell hooks))
+(defgeneric event-in-events-sequence (events-sequence event-name))

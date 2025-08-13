@@ -153,6 +153,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod add-cell-event! ((event cell-event))
   (add! (or (event-loop event) *event-loop*) event))
 
+(defmethod add-cell-event! ((event events-sequence))
+  (funcall (callback event)))
+
 (defmethod cell-notify-failure ((cell cell-event) failed)
   (handler-case
       (bind (((:accessors lock) cell)
@@ -215,13 +218,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     (unless (thread event-loop)
       (errors:!!! event-loop-not-started ("EVENT-LOOP is not running!")))
     (if (zerop delay)
-        (progn
-          (blocking-queue-push! (queue event-loop) event))
-        (progn
-          (tw:add! (timing-wheel event-loop)
-                   delay
-                   (lambda ()
-                     (add! event-loop event 0)))))
+        (blocking-queue-push! (queue event-loop) event)
+        (tw:add! (timing-wheel event-loop)
+                 delay
+                 (lambda ()
+                   (add! event-loop event 0))))
     (when-let ((start-deadline (start-deadline event)))
       (add! event-loop
             start-deadline
@@ -303,3 +304,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod (setf dependency) :around (new-value (event cell-event))
   (bt2:with-lock-held ((lock event)) (call-next-method)))
+
+(defmethod event-in-events-sequence (events-sequence event-name)
+  (gethash event-name (contained-events events-sequence)))

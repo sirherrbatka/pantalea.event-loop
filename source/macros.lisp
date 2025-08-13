@@ -40,94 +40,93 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (collecting
              `(clear-dependency ,cell))))))
 
-(defmacro events-sequence (event-loop spec &body body)
-  (let ((variable-names (mapcar #'first spec)))
-    (alexandria:with-gensyms (!hook !cell)
-      `(let* ((*events-context* (or *events-context* (list nil)))
-              (*event-loop* ,event-loop)
-              ,@variable-names)
-         (declare (ignorable ,@variable-names))
+(defmacro expand-cell-event (variable-name (&key success failure
+                                           (timeout nil timeout-bound-p)
+                                           (delay 0)
+                                           (start-deadline nil)
+                                           (class (if timeout-bound-p 'request-event 'cell-event))
+                                           (event-loop nil event-loop-bound-p))
+                          &body body)
+  (bind ((everything (append success failure))
+         (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym)) everything)))
+    (assert (endp (intersection success failure)))
+    (assert (equal (remove-duplicates everything) everything))
+    `(setf ,variable-name
+           (make-instance ',class
+                          :delay ,delay
+                          :success-dependencies '(,@success)
+                          :failure-dependencies '(,@failure)
+                          :event-loop ,(if event-loop-bound-p event-loop *event-loop*)
+                          :name ',variable-name
+                          :start-deadline ,start-deadline
+                          :callback (lambda (&aux (*event* *event*))
+                                      (let ,(mapcar #'list gensyms everything)
+                                        (symbol-macrolet ,(mapcar (lambda (symbol gensym)
+                                                                    `(,symbol (cell-event-result ,gensym)))
+                                                           everything
+                                                           gensyms)
+                                          ,@body)))
+                          ,@(when timeout-bound-p (list :timeout timeout))))))
+
+(defmacro expand-cell-event-attach (spec)
+  `(progn
+     ,@(apply #'append (mapcar (lambda (spec)
+                                 (bind (((name (&key success  failure &allow-other-keys). body) spec))
+                                   (declare (ignore body))
+                                   `(,@(mapcar (lambda (d)
+                                                 `(attach-on-success! ,d ,name))
+                                               success)
+                                     ,@(mapcar (lambda (d)
+                                                 `(attach-on-failure! ,d ,name))
+                                               failure))))
+                               spec))))
+
+(defmacro with-events (spec event-loop &body body)
+  (bind (((:flet variable-name (spec)) (first spec))
+         (variable-names (mapcar #'variable-name spec)))
+    (once-only (event-loop)
+      `(let ((*event-loop* ,event-loop)
+             ,@variable-names)
          ,@(mapcar (lambda (spec)
-                     (bind (((variable-name args . body) spec)
-                            ((&key success failure
-                                   (timeout nil timeout-bound-p)
-                                   (delay 0)
-                                   (start-deadline nil)
-                                   (class (if timeout-bound-p 'request-event 'cell-event))
-                                   (event-loop nil event-loop-bound-p))
-                             args)
-                            (everything (append success failure))
-                            (combined (intersection everything variable-names))
-                            (foreign (set-difference everything variable-names))
-                            (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym))
-                                             combined)))
-                       (assert (endp (intersection success failure)))
-                       (assert (equal (remove-duplicates everything) everything))
-                       `(setf ,variable-name
-                              (make-instance ',class
-                                             :delay ,delay
-                                             :success-dependencies '(,@success)
-                                             :failure-dependencies '(,@failure)
-                                             :event-loop ,(if event-loop-bound-p event-loop *event-loop*)
-                                             :name ',variable-name
-                                             :start-deadline ,start-deadline
-                                             :callback (lambda (&aux (*event* *event*))
-                                                         (symbol-macrolet ,(mapcar (lambda (symbol)
-                                                                                     `(,symbol (cell-event-result (find ',symbol
-                                                                                                                        (dependency-cells *event*)
-                                                                                                                        :key #'name))))
-                                                                            foreign)
-                                                           (let ,(mapcar #'list gensyms combined)
-                                                             (symbol-macrolet ,(mapcar (lambda (gensym symbol)
-                                                                                         `(,symbol (cell-event-result ,gensym)))
-                                                                                gensyms
-                                                                                combined)
-                                                               ,@body))))
-                                             ,@(when timeout-bound-p (list :timeout timeout))))))
+                     `(expand-cell-event ,@spec))
                    spec)
-         (with-attach ,variable-names
-           (iterate
-             (for ,!cell in *events-context*)
-             (until (null ,!cell))
-             (iterate
-               (for ,!hook in (success-dependencies ,!cell))
-               (cond ,@(mapcar (lambda (symbol)
-                                 `((eq ',symbol ,!hook)
-                                   (attach-on-success! ,symbol ,!cell)
-                                   (push ,symbol (dependency-cells ,!cell))))
-                               variable-names)))
-             (iterate
-               (for ,!hook in (failure-dependencies ,!cell))
-               (cond ,@(mapcar (lambda (symbol)
-                                 `((eq ',symbol ,!hook)
-                                   (attach-on-failure! ,symbol ,!cell)
-                                   (push ,symbol (dependency-cells ,!cell))))
-                               variable-names))))
-           ,@(mapcar
-              (lambda (symbol)
-                `(push ,symbol *events-context*))
-              variable-names)
-           ,@(mapcar
-              (lambda (spec)
-                (bind (((name args . body) spec)
-                       ((&key success  failure &allow-other-keys) args))
-                  (declare (ignore body))
-                  `(progn
-                     ,@(mapcar (lambda (d)
-                                 (when (member d variable-names)
-                                   `(attach-on-success! ,d ,name)))
-                               success)
-                     ,@(mapcar (lambda (d)
-                                 (when (member d variable-names)
-                                   `(attach-on-failure! ,d ,name)))
-                               failure))))
-              spec))
+         (expand-cell-event-attach ,spec)
          ,@body))))
+
+(defmacro with-new-events-sequence (event-loop spec &body body)
+  (bind (((:flet variable-name (spec)) (first spec))
+         (variable-names (mapcar #'variable-name spec)))
+    `(with-events ,spec ,event-loop
+       (lret ((result
+               (make-instance 'events-sequence
+                              :contained-events (dict ,@(iterate
+                                                          (for variable-name in variable-names)
+                                                          (collecting `',variable-name)
+                                                          (collecting variable-name)))
+                              :event-loop ,event-loop
+                              :callback (lambda (&aux (*event-loop* ,event-loop))
+                                          ,@body))))
+         (unless *events-context*
+           (add-cell-event! result))))))
+
+(defmacro with-existing-events-sequence (existing-events-sequence event-loop existing-events spec &body body)
+  (with-gensyms (!old-context)
+    (once-only (existing-events-sequence)
+      `(let* ((,!old-context *events-context*)
+              (*events-context* t)
+              ,@(mapcar (lambda (name) `(,name (event-in-events-sequence ,existing-events-sequence ',name)))
+                        existing-events))
+         (with-events ,spec ,event-loop
+           (progn
+             ,@(iterate
+                 (for variable in spec)
+                 (for variable-name = (first variable))
+                 (collecting `(setf (gethash ',variable-name (contained-events ,existing-events-sequence))
+                                    ,variable-name)))
+             (unless ,!old-context
+               (add-cell-event! ,existing-events-sequence))
+             ,@body))))))
 
 (defmacro on-event-loop ((&key (delay 0) (event-loop '*event-loop*)) &body body)
   `(let ((*event-loop* ,event-loop))
      (add! *event-loop* (lambda () ,@body) ,delay)))
-
-(defmacro defhook (name)
-  (declare (ignore name))
-  nil)

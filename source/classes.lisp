@@ -66,6 +66,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :completed nil
    :id (random most-positive-fixnum)))
 
+(defclass events-sequence ()
+  ((%contained-events
+    :initarg :contained-events
+    :reader contained-events)
+   (%event-loop
+    :initarg :event-loop
+    :reader event-loop)
+   (%callback
+    :initarg :callback
+    :reader callback))
+  (:default-initargs
+   :event-loop nil
+   :contained-events (make-hash-table)))
+
 (defclass cell-event (event)
   ((%promise
     :initarg :promise
