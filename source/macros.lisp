@@ -71,8 +71,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmacro expand-cell-event-attach (spec)
   `(progn
      ,@(apply #'append (mapcar (lambda (spec)
-                                 (bind (((name (&key success  failure &allow-other-keys). body) spec))
+                                 (bind (((name (&key success failure &allow-other-keys). body) spec))
                                    (declare (ignore body))
+                                   (assert (endp (intersection success failure)))
+                                   (assert (equal (remove-duplicates success) success))
+                                   (assert (equal (remove-duplicates failure) failure))
                                    `(,@(mapcar (lambda (d)
                                                  `(attach-on-success! ,d ,name))
                                                success)
