@@ -61,22 +61,22 @@
 #+(or)
 (rove:run-test 'two-elements-sequence-test)
 
-(rove:deftest cancel-after-completion-test                          ; ; ; ; ; ;
-  (let ((event-loop (make-instance 'pantalea.event-loop:event-loop))) ; ; ; ; ; ;
-    (pantalea.event-loop:start! event-loop) ; ; ; ; ; ;
-    (rove:ok (running-p event-loop))        ; ; ; ; ; ;
-    (unwind-protect                         ; ; ; ; ; ;
+(rove:deftest cancel-after-completion-test
+  (let ((event-loop (make-instance 'pantalea.event-loop:event-loop)))
+    (pantalea.event-loop:start! event-loop)
+    (rove:ok (running-p event-loop))
+    (unwind-protect
          (with-new-events-sequence
-             event-loop                       ; ; ; ; ; ;
-             ((a (:delay 0)                   ; ; ; ; ; ;
-                 5)                           ; ; ; ; ; ;
-              (b (:success (a) :delay 0)      ; ; ; ; ; ;
-                 (+ 2 a)))                    ; ; ; ; ; ;
-           (add-cell-event! a)                ; ; ; ; ; ;
-           (sleep 3)                          ; ; ; ; ; ;
-           (rove:signals (cancel! b (errors:make-chained event-loop-error ("canceled!")))) ; ; ; ; ; ;
-           (rove:ok (= 5 (pantalea.event-loop:cell-event-result a))) ; ; ; ; ; ;
-           (rove:ok (= 7 (pantalea.event-loop:cell-event-result b)))) ; ; ; ; ; ;
+             event-loop
+             ((a (:delay 0)
+                 5)
+              (b (:success (a) :delay 0)
+                 (+ 2 a)))
+           (add-cell-event! a)
+           (sleep 3)
+           (rove:signals (cancel! b (errors:make-chained event-loop-error ("canceled!"))))
+           (rove:ok (= 5 (pantalea.event-loop:cell-event-result a)))
+           (rove:ok (= 7 (pantalea.event-loop:cell-event-result b))))
       (pantalea.event-loop:stop! event-loop))))
 
 #+(or)
