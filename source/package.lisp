@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 #:nest
                 #:dict
                 #:lret
+                #:~>>
                 #:~>)
   (:import-from #:alexandria
                 #:most-positive-fixnum

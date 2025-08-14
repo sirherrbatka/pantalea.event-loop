@@ -10,10 +10,9 @@
              (with-new-events-sequence
                  event-loop
                  ((a (:delay 0)
-                     (setf *test* 5)))
+                     5))
                (add-cell-event! a))
              event-loop
-             (a)
              ((b (:success (a) :delay 0)
                  (+ a 2)))
            (rove:ok (= 5 (pantalea.event-loop:cell-event-result a)))

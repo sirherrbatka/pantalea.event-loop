@@ -109,23 +109,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (unless *events-context*
            (add-cell-event! result))))))
 
-(defmacro with-existing-events-sequence (existing-events-sequence event-loop existing-events spec &body body)
-  (with-gensyms (!old-context)
-    (once-only (existing-events-sequence)
-      `(let* ((,!old-context *events-context*)
-              (*events-context* t)
-              ,@(mapcar (lambda (name) `(,name (event-in-events-sequence ,existing-events-sequence ',name)))
-                        existing-events))
-         (with-events ,spec ,event-loop
-           (progn
-             ,@(iterate
-                 (for variable in spec)
-                 (for variable-name = (first variable))
-                 (collecting `(setf (gethash ',variable-name (contained-events ,existing-events-sequence))
-                                    ,variable-name)))
-             (unless ,!old-context
-               (add-cell-event! ,existing-events-sequence))
-             ,@body))))))
+(defmacro with-existing-events-sequence (existing-events-sequence event-loop spec &body body)
+  (bind ((existing-events (set-difference (~>> spec
+                                               (mapcar (lambda (spec)
+                                                         (bind (((name (&key success failure &allow-other-keys). body) spec))
+                                                           (declare (ignore body name))
+                                                           (append success failure))))
+                                               (apply #'append))
+                                          (mapcar #'first spec))))
+    (with-gensyms (!old-context)
+      (once-only (existing-events-sequence)
+        `(let* ((,!old-context *events-context*)
+                (*events-context* t)
+                ,@(mapcar (lambda (name) `(,name (event-in-events-sequence ,existing-events-sequence ',name)))
+                          existing-events))
+           (with-events ,spec ,event-loop
+             (progn
+               ,@(iterate
+                   (for variable in spec)
+                   (for variable-name = (first variable))
+                   (collecting `(setf (gethash ',variable-name (contained-events ,existing-events-sequence))
+                                      ,variable-name)))
+               (unless ,!old-context
+                 (add-cell-event! ,existing-events-sequence))
+               ,@body)))))))
 
 (defmacro on-event-loop ((&key (delay 0) (event-loop '*event-loop*)) &body body)
   `(let ((*event-loop* ,event-loop))
