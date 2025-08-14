@@ -70,19 +70,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmacro expand-cell-event-attach (spec)
   `(progn
-     ,@(apply #'append (mapcar (lambda (spec)
-                                 (bind (((name (&key success failure &allow-other-keys). body) spec))
-                                   (declare (ignore body))
-                                   (assert (endp (intersection success failure)))
-                                   (assert (equal (remove-duplicates success) success))
-                                   (assert (equal (remove-duplicates failure) failure))
-                                   `(,@(mapcar (lambda (d)
-                                                 `(attach-on-success! ,d ,name))
-                                               success)
-                                     ,@(mapcar (lambda (d)
-                                                 `(attach-on-failure! ,d ,name))
-                                               failure))))
-                               spec))))
+     ,@(apply #'append
+              (mapcar (lambda (spec)
+                        (bind (((name (&key success failure &allow-other-keys). body) spec))
+                          (declare (ignore body))
+                          (assert (endp (intersection success failure)))
+                          (assert (equal (remove-duplicates success) success))
+                          (assert (equal (remove-duplicates failure) failure))
+                          `(,@(mapcar (lambda (d)
+                                        `(attach-on-success! ,d ,name))
+                                      success)
+                            ,@(mapcar (lambda (d)
+                                        `(attach-on-failure! ,d ,name))
+                                      failure))))
+                      spec))))
 
 (defmacro with-events (spec event-loop &body body)
   (bind (((:flet variable-name (spec)) (first spec))
@@ -120,22 +121,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                            (append success failure))))
                                                (apply #'append))
                                           (mapcar #'first spec))))
-    (with-gensyms (!old-context)
-      (once-only (existing-events-sequence)
-        `(let* ((,!old-context *events-context*)
-                (*events-context* t)
-                ,@(mapcar (lambda (name) `(,name (event-in-events-sequence ,existing-events-sequence ',name)))
-                          existing-events))
-           (with-events ,spec ,event-loop
-             (progn
-               ,@(iterate
-                   (for variable in spec)
-                   (for variable-name = (first variable))
-                   (collecting `(setf (gethash ',variable-name (contained-events ,existing-events-sequence))
-                                      ,variable-name)))
-               (unless ,!old-context
-                 (add-cell-event! ,existing-events-sequence))
-               ,@body)))))))
+    (with-gensyms (!old-context !existing-events-sequence)
+      `(let* ((,!old-context *events-context*)
+              (*events-context* t)
+              (,!existing-events-sequence ,existing-events-sequence)
+              ,@(mapcar (lambda (name) `(,name (event-in-events-sequence ,!existing-events-sequence ',name)))
+                        existing-events))
+         (with-events ,spec ,event-loop
+           (progn
+             ,@(iterate
+                 (for variable in spec)
+                 (for variable-name = (first variable))
+                 (collecting `(setf (gethash ',variable-name (contained-events ,existing-events-sequence))
+                                    ,variable-name)))
+             (unless ,!old-context
+               (add-cell-event! ,!existing-events-sequence))
+             ,@body))))))
 
 (defmacro on-event-loop ((&key (delay 0) (event-loop '*event-loop*)) &body body)
   `(let ((*event-loop* ,event-loop))
