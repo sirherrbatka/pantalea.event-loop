@@ -89,7 +89,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor promise)
    (%callback
     :initarg :callback
-    :reader callback)
+    :accessor callback)
    (%dependency
     :initarg :dependency
     :accessor dependency)
