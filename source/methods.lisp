@@ -20,7 +20,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
-
 (cl:in-package #:pantalea.event-loop)
 
 
@@ -56,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (p:fullfill! (promise (request handler)) (funcall (payload handler) event))
     (:no-error (e) (declare (ignore e))
       (iterate
-          (for elt in (success-dependent event))
+        (for elt in (reverse (success-dependent event)))
           (cell-notify-success elt event)))
     (error (e)
       (handler-case (p:cancel! (request handler)
@@ -66,8 +65,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           (log:warn "Error while attempting to cancel: ~a" e))
         (:no-error (e) (declare (ignore e))
           (iterate
-            (for elt in (bt2:with-lock-held ((lock event))
-                          (failure-dependent event)))
+            (for elt in (reverse (failure-dependent event)))
             (cell-notify-failure elt event)))))))
 
 (defmethod response-handler ((loop event-loop) id)
@@ -198,6 +196,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       (ignore-errors (remove-response-handler event reason)))
     (:no-error (e) (declare (ignore e))
       (ignore-errors (remove-response-handler event reason)))))
+
+(defmethod add! :before ((event-loop event-loop) (event event) &optional (delay 0))
+  (declare (ignore delay))
+  (setf (event-loop event) event-loop))
 
 (defmethod add! ((event-loop event-loop) event &optional (delay 0))
   (assert (>= delay 0))

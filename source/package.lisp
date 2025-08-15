@@ -84,4 +84,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:start!
    #:stop!
    #:respond
+   #:make-event
    ))

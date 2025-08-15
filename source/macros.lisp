@@ -40,13 +40,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
            (collecting
              `(clear-dependency ,cell))))))
 
+(defmacro make-event (name (&rest all
+                            &key
+                              success failure
+                              (timeout nil timeout-bound-p)
+                              (delay 0)
+                              (start-deadline nil)
+                              (class (if timeout-bound-p 'request-event 'cell-event))
+                              (event-loop nil event-loop-bound-p) )
+                      &body body)
+  (let* ((everything (append success failure))
+         (gensyms (map-into (copy-list everything) #'gensym))
+         (!result (gensym)))
+    `(lret ((,!result
+             (make-instance ',class
+                            :delay ,delay
+                            :success-dependencies '(,@success)
+                            :failure-dependencies '(,@failure)
+                            :event-loop ,(if event-loop-bound-p event-loop *event-loop*)
+                            :name ',name
+                            :start-deadline ,start-deadline
+                            :callback (lambda (&aux (*event* *event*))
+                                        (let ,(mapcar #'list gensyms everything)
+                                          (symbol-macrolet ,(mapcar (lambda (symbol gensym)
+                                                                      `(,symbol (cell-event-result ,gensym)))
+                                                             everything
+                                                             gensyms)
+                                            ,@body)))
+                            ,@(when timeout-bound-p (list :timeout timeout)))))
+       (expand-cell-event-attach (,@all)))))
+
 (defmacro expand-cell-event (variable-name (&key success failure
-                                           (timeout nil timeout-bound-p)
-                                           (delay 0)
-                                           (start-deadline nil)
-                                           (class (if timeout-bound-p 'request-event 'cell-event))
-                                           (event-loop nil event-loop-bound-p))
-                          &body body)
+                                              (timeout nil timeout-bound-p)
+                                              (delay 0)
+                                              (start-deadline nil)
+                                              (class (if timeout-bound-p 'request-event 'cell-event))
+                                              (event-loop nil event-loop-bound-p))
+                             &body body)
   (bind ((everything (append success failure))
          (gensyms (mapcar (lambda (x) (declare (ignore x)) (gensym)) everything)))
     (assert (endp (intersection success failure)))

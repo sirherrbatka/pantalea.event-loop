@@ -24,7 +24,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (defun respond (data &rest all)
-  (add-cell-event! (apply #'make-instance 'response-event
-                          :id (id *event*)
-                          :data data
-                          all)))
+  (add! (event-loop *event*)
+        (apply #'make-instance 'response-event
+               :id (id *event*)
+               :data data
+               all)))

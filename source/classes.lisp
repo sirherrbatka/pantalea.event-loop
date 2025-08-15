@@ -61,8 +61,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :accessor id)
    (%completed
     :initarg :completed
-    :accessor completed))
+    :accessor completed)
+   (%event-loop
+    :initarg :event-loop
+    :accessor event-loop))
   (:default-initargs
+   :event-loop nil
    :completed nil
    :id (random most-positive-fixnum)))
 
@@ -77,7 +81,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :callback
     :reader callback))
   (:default-initargs
-   :event-loop nil
    :contained-events (make-hash-table)))
 
 (defclass cell-event (event)
@@ -116,13 +119,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :reader lock)
    (%name
     :initarg :name
-    :accessor name)
-   (%event-loop
-    :initarg :event-loop
-    :reader event-loop))
+    :accessor name))
   (:default-initargs
    :lock (bt2:make-lock)
-   :event-loop nil
    :delay 0
    :start-deadline nil
    :dependency-cells nil
@@ -141,8 +140,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    :timeout nil))
 
 (defclass response-event (event)
-  ((%data :initarg :data
-          :reader data)))
+  ((%data
+    :initarg :data
+    :reader data)))
 
 (defclass termination-event ()
   ())
