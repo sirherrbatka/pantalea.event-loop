@@ -20,28 +20,11 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 |#
+(cl:in-package #:pantalea.event-loop)
 
-(asdf:defsystem #:pantalea.event-loop
-  :name "event-loop"
-  :depends-on (#:bordeaux-threads
-               #:iterate
-               #:metabang-bind
-               #:alexandria
-               #:serapeum
-               #:pantalea.queue
-               #:pantalea.errors
-               #:pantalea.timing-wheel
-               #:log4cl
-               #:pantalea.promise)
-  :serial T
-  :pathname "source"
-  :components ((:file "package")
-               (:file "macros")
-               (:file "conditions")
-               (:file "generics")
-               (:file "classes")
-               (:file "variables")
-               (:file "utils")
-               (:file "methods")
-               (:file "functions")
-               ))
+
+(defun respond (data &rest all)
+  (add-cell-event! (apply #'make-instance 'response-event
+                          :id (id *event*)
+                          :data data
+                          all)))

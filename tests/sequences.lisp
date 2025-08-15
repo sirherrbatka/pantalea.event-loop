@@ -41,6 +41,26 @@
 #+(or)
 (rove:run-test 'two-elements-sequence-test)
 
+(rove:deftest two-elements-error-test
+  (let ((event-loop (make-instance 'pantalea.event-loop:event-loop)))
+    (pantalea.event-loop:start! event-loop)
+    (rove:ok (running-p event-loop))
+    (unwind-protect
+         (with-new-events-sequence
+             event-loop
+             ((a ()
+                 (error "BOOM!!!"))
+              (b (:failure (a))
+                 (handler-case a
+                   (:no-error (e) (declare (ignore e)) 2)
+                   (error (e) (declare (ignore e)) 1))))
+           (pantalea.event-loop:add! event-loop a)
+           (rove:ok (= 1 (cell-event-result b))))
+      (pantalea.event-loop:stop! event-loop))))
+
+#+(or)
+(rove:run-test 'two-elements-error-test)
+
 (rove:deftest two-elements-cancel-test
   (let ((event-loop (make-instance 'pantalea.event-loop:event-loop)))
     (pantalea.event-loop:start! event-loop)
