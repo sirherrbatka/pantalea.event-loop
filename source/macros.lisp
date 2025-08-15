@@ -50,9 +50,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                               (event-loop nil event-loop-bound-p) )
                       &body body)
   (let* ((everything (append success failure))
-         (gensyms (map-into (copy-list everything) #'gensym))
-         (!result (gensym)))
-    `(lret ((,!result
+         (gensyms (map-into (copy-list everything) #'gensym)))
+    `(lret ((,name
              (make-instance ',class
                             :delay ,delay
                             :success-dependencies '(,@success)
@@ -68,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                              gensyms)
                                             ,@body)))
                             ,@(when timeout-bound-p (list :timeout timeout)))))
-       (expand-cell-event-attach (,@all)))))
+       (expand-cell-event-attach ((,name (,@all)))))))
 
 (defmacro expand-cell-event (variable-name (&key success failure
                                               (timeout nil timeout-bound-p)
