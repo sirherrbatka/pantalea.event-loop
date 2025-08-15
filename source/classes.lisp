@@ -66,7 +66,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     :initarg :event-loop
     :accessor event-loop))
   (:default-initargs
-   :event-loop nil
+   :event-loop *event-loop*
    :completed nil
    :id (random most-positive-fixnum)))
 

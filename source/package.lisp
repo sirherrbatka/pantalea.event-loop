@@ -86,4 +86,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:respond
    #:make-event
    #:callback
+   #:event-loop
    ))
