@@ -51,22 +51,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (defmethod react-with-handler ((handler response-handler)
                                (event response-event)
                                (loop event-loop))
-  (handler-case
-      (p:fullfill! (promise (request handler)) (funcall (payload handler) event))
-    (:no-error (e) (declare (ignore e))
-      (iterate
-        (for elt in (reverse (success-dependent event)))
+  (let ((request (request handler)))
+    (handler-case
+        (p:fullfill! (promise (request handler)) (funcall (payload handler) event))
+      (:no-error (e) (declare (ignore e))
+        (iterate
+          (for elt in (reverse (success-dependent request)))
           (cell-notify-success elt event)))
-    (error (e)
-      (handler-case (p:cancel! (request handler)
-                               :condition e
-                               :timeout 0.1)
-        (error (e)
-          (log:warn "Error while attempting to cancel: ~a" e))
-        (:no-error (e) (declare (ignore e))
-          (iterate
-            (for elt in (reverse (failure-dependent event)))
-            (cell-notify-failure elt event)))))))
+      (error (e)
+        (handler-case (p:cancel! (request handler)
+                                 :condition e
+                                 :timeout 0.1)
+          (error (e)
+            (log:warn "Error while attempting to cancel: ~a" e))
+          (:no-error (e) (declare (ignore e))
+            (iterate
+              (for elt in (reverse (failure-dependent request)))
+              (cell-notify-failure elt event))))))))
 
 (defmethod response-handler ((loop event-loop) id)
   (gethash id (request-handlers loop)))
@@ -308,4 +309,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod event-in-events-sequence (events-sequence event-name)
-  (gethash event-name (contained-events events-sequence)))
+  (bind (((:values result found) (gethash event-name (contained-events events-sequence))))
+    (unless found
+      (error "event with name ~a was not found, present events are ~a" event-name
+             (hash-table-keys (contained-events events-sequence))))
+    result))
