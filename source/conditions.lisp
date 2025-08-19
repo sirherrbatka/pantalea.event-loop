@@ -47,3 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (errors:def unable-to-cancel (event-loop-error)
   ())
+
+(errors:def no-cell-event-with-name (event-loop-error)
+  ((%event-name :initarg :event-name
+                :reader event-name)))

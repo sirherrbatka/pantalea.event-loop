@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                (loop event-loop))
   (let ((request (request handler)))
     (handler-case
-        (p:fullfill! (promise (request handler)) (funcall (payload handler) event))
+        (p:fullfill! (promise request) (funcall (payload handler) event))
       (:no-error (e) (declare (ignore e))
         (iterate
           (for elt in (reverse (success-dependent request)))
@@ -309,8 +309,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   (bt2:with-lock-held ((lock event)) (call-next-method)))
 
 (defmethod event-in-events-sequence (events-sequence event-name)
-  (bind (((:values result found) (gethash event-name (contained-events events-sequence))))
-    (unless found
-      (error "event with name ~a was not found, present events are ~a" event-name
-             (hash-table-keys (contained-events events-sequence))))
-    result))
+  (or (gethash event-name (contained-events events-sequence))
+      (errors:!!! no-cell-event-with-name ("Event ~a not found!" event-name)
+                  :event-name event-name)))

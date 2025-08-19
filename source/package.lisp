@@ -73,6 +73,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:obtain-handler-without-id
    #:on-event-loop
    #:event-in-events-sequence
+   #:no-cell-event-with-name
    #:react
    #:react-with-handler
    #:remove-response-handler
