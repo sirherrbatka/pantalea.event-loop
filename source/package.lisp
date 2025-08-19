@@ -82,6 +82,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    #:running-p
    #:setup-response-handler
    #:start!
+   #:data
    #:stop!
    #:respond
    #:make-event

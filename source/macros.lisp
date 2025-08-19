@@ -126,7 +126,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (expand-cell-event-attach ,spec)
          ,@body))))
 
-(defmacro with-new-events-sequence (event-loop spec &body body)
+(defmacro with-new-events-sequence (event-loop (&rest spec) &body body)
   (bind (((:flet variable-name (spec)) (first spec))
          (variable-names (mapcar #'variable-name spec)))
     `(with-events ,spec ,event-loop
@@ -142,7 +142,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (unless *events-context*
            (add-cell-event! result))))))
 
-(defmacro with-existing-events-sequence (existing-events-sequence event-loop spec &body body)
+(defmacro with-existing-events-sequence (existing-events-sequence event-loop (&rest spec) &body body)
   (bind ((existing-events (set-difference (~>> spec
                                                (mapcar (lambda (spec)
                                                          (bind (((name (&key success failure &allow-other-keys). body) spec))

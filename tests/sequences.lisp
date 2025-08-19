@@ -110,9 +110,7 @@
          (with-new-events-sequence
              event-loop
              ((a (:timeout 10)
-                 (add! event-loop (make-instance 'response-event
-                                                 :id (id *event*)
-                                                 :data 5))
+                 (respond 5)
                  (lambda (event)
                    (+ 2 (data event)))))
            (pantalea.event-loop:add! event-loop a)
