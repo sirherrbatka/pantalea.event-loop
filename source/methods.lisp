@@ -77,8 +77,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (defmethod setup-response-handler ((event request-event) (loop event-loop) payload)
   (let ((handler (make-instance 'response-handler
-                           :request event
-                           :payload payload)))
+                                :request event
+                                :payload payload)))
     (bt2:with-lock-held ((main-lock loop))
       (setf (response-handler loop (id event)) handler))))
 
@@ -111,7 +111,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             (unless (p:fullfilledp promise)
               (log:warn "Timeout while waiting on request ~a" event)
               (cancel! event (errors:make-chained request-timeout
-                                                  ("Timeout ~a crossed." timeout))))))
+                                                  ("Timeout ~a crossed." timeout)))
+              (iterate
+                (for elt in (failure-dependent event))
+                (cell-notify-failure elt event)))))
         (error (e)
           (handler-case (p:cancel! (promise event)
                                    :condition e
